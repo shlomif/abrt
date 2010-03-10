@@ -44,6 +44,8 @@ PKG_CHECK_MODULES([XMLRPC], [xmlrpc])
 PKG_CHECK_MODULES([XMLRPC_CLIENT], [xmlrpc_client])
 PKG_CHECK_MODULES([POLKIT],[polkit-gobject-1])
 PKG_CHECK_MODULES([ZIP],[libzip])
+PKG_CHECK_MODULES([PACKAGEKIT_GLIB2],[packagekit-glib2])
+
 
 AC_CHECK_HEADER([libtar.h], [],
    [AC_MSG_ERROR([libtar.h is needed to build abrt])])

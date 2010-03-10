@@ -24,6 +24,7 @@ abrtd_CPPFLAGS = \
     $(GLIB_CFLAGS) \
     $(DBUS_CFLAGS) \
     $(XMLRPC_CFLAGS) $(XMLRPC_CLIENT_CFLAGS) \
+	$(PACKAGEKIT_GLIB2_LIBS) \
     $(ENABLE_SOCKET_OR_DBUS) \
     -D_GNU_SOURCE \
     -Wall
@@ -33,7 +34,8 @@ abrtd_LDADD = \
     $(DL_LIBS) \
     $(DBUS_LIBS) \
     $(RPM_LIBS) \
-    $(XMLRPC_LIBS) $(XMLRPC_CLIENT_LIBS)
+    $(XMLRPC_LIBS) $(XMLRPC_CLIENT_LIBS) \
+	$(PACKAGEKIT_GLIB2_LIBS)
 
 dbusabrtconfdir = ${sysconfdir}/dbus-1/system.d/
 dist_dbusabrtconf_DATA = dbus-abrt.conf
