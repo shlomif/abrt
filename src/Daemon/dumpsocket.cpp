@@ -39,8 +39,8 @@
 /* Maximum number of simultaneously opened client connections. */
 #define MAX_CLIENT_COUNT 10
 
-/* Interval between checks of client halt, in seconds. */
-#define CLIENT_CHECK_INTERVAL 10
+/* Interval between checks of client halt, in seconds.(glib-2.12 has only timers in ms) */
+#define CLIENT_CHECK_INTERVAL 10000
 
 /* Interval with no data received from client, after which the client is
    considered halted, in seconds. */
@@ -265,9 +265,9 @@ static char *try_to_get_string(const char *message,
 
     if (strlen(contents) > max_len)
     {
-        char *max_len_str = g_format_size_for_display(max_len);
-        error_msg("dumpsocket: Received %s too long -> trimming to %s", tag, max_len_str);
-        g_free(max_len_str);
+        //char *max_len_str = g_format_size_for_display(max_len);
+        error_msg("dumpsocket: Received %s too long", tag);
+        //g_free(max_len_str);
     }
 
     return xstrndup(contents, max_len);
@@ -481,7 +481,7 @@ static struct client *client_new(int socket)
     check_status(status, err, "setting encoding");
 
     /* Start timer to check the client problems. */
-    client->timer_id = g_timeout_add_seconds(CLIENT_CHECK_INTERVAL, client_check_cb, client);
+    client->timer_id = g_timeout_add(CLIENT_CHECK_INTERVAL, client_check_cb, client);
     if (!client->timer_id)
         error_msg_and_die("dumpsocket: Can't add client timer");
 

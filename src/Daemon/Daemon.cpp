@@ -150,11 +150,12 @@ static gboolean cron_activation_reshedule_cb(gpointer data)
     cron_callback_data_t* cronPeriodicCallbackData = new cron_callback_data_t(cronResheduleCallbackData->m_sPluginName,
                                                                               cronResheduleCallbackData->m_sPluginArgs,
                                                                               cronResheduleCallbackData->m_nTimeout);
-    g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
-                               cronPeriodicCallbackData->m_nTimeout,
-                               cron_activation_periodic_cb,
-                               static_cast<gpointer>(cronPeriodicCallbackData),
-                               cron_delete_callback_data_cb
+    // timer is in ms
+    g_timeout_add_full(G_PRIORITY_DEFAULT,
+                        cronPeriodicCallbackData->m_nTimeout * 1000,
+                        cron_activation_periodic_cb,
+                        static_cast<gpointer>(cronPeriodicCallbackData),
+                        cron_delete_callback_data_cb
     );
     return FALSE;
 }
@@ -230,11 +231,12 @@ static int SetUpCron()
             for (; it_ar != it_c->second.end(); it_ar++)
             {
                 cron_callback_data_t* cronPeriodicCallbackData = new cron_callback_data_t(it_ar->first, it_ar->second, timeout);
-                g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
-                                           timeout,
-                                           cron_activation_periodic_cb,
-                                           static_cast<gpointer>(cronPeriodicCallbackData),
-                                           cron_delete_callback_data_cb);
+                // timer is in ms
+                g_timeout_add_full(G_PRIORITY_DEFAULT,
+                                    timeout * 1000,
+                                    cron_activation_periodic_cb,
+                                    static_cast<gpointer>(cronPeriodicCallbackData),
+                                    cron_delete_callback_data_cb);
             }
         }
         else
@@ -264,17 +266,18 @@ static int SetUpCron()
             for (; it_ar != it_c->second.end(); it_ar++)
             {
                 cron_callback_data_t* cronOneCallbackData = new cron_callback_data_t(it_ar->first, it_ar->second, timeout);
-                g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
-                                           timeout,
-                                           cron_activation_one_cb,
-                                           static_cast<gpointer>(cronOneCallbackData),
-                                           cron_delete_callback_data_cb);
+                // timer is in ms
+                g_timeout_add_full(G_PRIORITY_DEFAULT,
+                                    timeout * 1000,
+                                    cron_activation_one_cb,
+                                    static_cast<gpointer>(cronOneCallbackData),
+                                    cron_delete_callback_data_cb);
                 cron_callback_data_t* cronResheduleCallbackData = new cron_callback_data_t(it_ar->first, it_ar->second, 24 * 60 * 60);
-                g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
-                                           timeout,
-                                           cron_activation_reshedule_cb,
-                                           static_cast<gpointer>(cronResheduleCallbackData),
-                                           cron_delete_callback_data_cb);
+                g_timeout_add_full(G_PRIORITY_DEFAULT,
+                                    timeout * 1000,
+                                    cron_activation_reshedule_cb,
+                                    static_cast<gpointer>(cronResheduleCallbackData),
+                                    cron_delete_callback_data_cb);
             }
         }
     }
@@ -629,6 +632,8 @@ static void run_main_loop(GMainLoop* loop)
     time_t old_time = 0;
     time_t dns_conf_hash = 0;
 
+    GPollFunc fn_poll = g_main_context_get_poll_func(context);
+
     while (!s_exiting)
     {
         /* we have just a handful of sources, 32 should be ample */
@@ -648,7 +653,7 @@ static void run_main_loop(GMainLoop* loop)
 
         if (s_timeout)
             alarm(s_timeout);
-        g_poll(fds, nfds, timeout);
+        fn_poll(fds, nfds, timeout);
         if (s_timeout)
             alarm(0);
 
