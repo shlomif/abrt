@@ -68,12 +68,14 @@ libABRTdUtils_la_CPPFLAGS = \
     -DVAR_RUN=\"$(VAR_RUN)\" \
     $(CURL_CFLAGS) \
     $(POLKIT_CFLAGS) \
+    $(LIBXML_CFLAGS) \
     -D_GNU_SOURCE
 libABRTdUtils_la_LDFLAGS = \
     -version-info 0:1:0
 libABRTdUtils_la_LIBADD = \
     $(CURL_LIBS) \
     $(POLKIT_LIBS) \
+    $(LIBXML_LIBS) \
     -ldl
 
 $(DESTDIR)/$(DEBUG_DUMPS_DIR):
