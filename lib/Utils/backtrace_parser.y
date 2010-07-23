@@ -96,9 +96,11 @@ int yylex();
                '\n' '\t' '\\' '!' '*' '%' '|' '^' '&' '$'
 %type <num>    frame_start
 
+/*
 %destructor { thread_free($$); } <thread>
 %destructor { frame_free($$); } <frame>
 %destructor { strbuf_free($$); } <strbuf>
+*/
 
 %start backtrace
 %glr-parser
