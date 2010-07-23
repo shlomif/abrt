@@ -198,8 +198,9 @@ abrt_post(abrt_post_state_t *state,
     if (state->username) {
         // bitmask of allowed auth methods
         xcurl_easy_setopt_long(handle, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        xcurl_easy_setopt_ptr(handle, CURLOPT_USERNAME, state->username);
-        xcurl_easy_setopt_ptr(handle, CURLOPT_PASSWORD, (state->password ? state->password : ""));
+        char *userpwd = xasprintf("%s:%s", state->username, (state->password ? state->password : ""));
+        xcurl_easy_setopt_ptr(handle, CURLOPT_USERPWD, userpwd);
+        free(userpwd);
     }
 
     // Do a regular HTTP post. This also makes curl use

@@ -66,11 +66,13 @@ libABRTdUtils_la_CPPFLAGS = \
     -DPLUGINS_CONF_DIR=\"$(PLUGINS_CONF_DIR)\" \
     -DCONF_DIR=\"$(CONF_DIR)\" \
     -DVAR_RUN=\"$(VAR_RUN)\" \
+    $(CURL_CFLAGS) \
     $(POLKIT_CFLAGS) \
     -D_GNU_SOURCE
 libABRTdUtils_la_LDFLAGS = \
     -version-info 0:1:0
 libABRTdUtils_la_LIBADD = \
+    $(CURL_LIBS) \
     $(POLKIT_LIBS) \
     -ldl
 
