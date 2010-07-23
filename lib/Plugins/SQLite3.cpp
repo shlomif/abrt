@@ -359,12 +359,7 @@ void CSQLite3::DisConnect()
 
 void CSQLite3::Connect()
 {
-    int ret = sqlite3_open_v2(m_sDBPath.c_str(),
-                &m_pDB,
-                SQLITE_OPEN_READWRITE,
-                NULL
-    );
-
+    int ret = sqlite3_open(m_sDBPath.c_str(), &m_pDB);
     if (ret != SQLITE_OK)
     {
         if (ret != SQLITE_CANTOPEN)
@@ -372,11 +367,7 @@ void CSQLite3::Connect()
             throw CABRTException(EXCEP_PLUGIN, "Can't open database '%s': %s", m_sDBPath.c_str(), sqlite3_errmsg(m_pDB));
         }
 
-        ret = sqlite3_open_v2(m_sDBPath.c_str(),
-                &m_pDB,
-                SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-                NULL
-        );
+        int ret = sqlite3_open(m_sDBPath.c_str(), &m_pDB);
         if (ret != SQLITE_OK)
         {
             throw CABRTException(EXCEP_PLUGIN, "Can't create database '%s': %s", m_sDBPath.c_str(), sqlite3_errmsg(m_pDB));
