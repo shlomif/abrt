@@ -30,7 +30,6 @@ BuildRequires: sqlite-devel > 3.0
 BuildRequires: desktop-file-utils
 #BuildRequires: nss-devel
 BuildRequires: libnotify-devel
-BuildRequires: file-devel
 BuildRequires: python-devel
 BuildRequires: gettext
 BuildRequires: libxml2-devel
