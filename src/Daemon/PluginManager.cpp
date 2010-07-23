@@ -22,7 +22,6 @@
 #include "abrtlib.h"
 #include "abrt_exception.h"
 #include "comm_layer_inner.h"
-#include "Polkit.h"
 #include "PluginManager.h"
 
 using namespace std;
@@ -261,29 +260,12 @@ void CPluginManager::UnLoadPlugin(const char *pName)
 #ifdef PLUGIN_DYNAMIC_LOAD_UNLOAD
 void CPluginManager::RegisterPluginDBUS(const char *pName, const char *pDBUSSender)
 {
-    int polkit_result = polkit_check_authorization(pDBUSSender,
-                           "org.fedoraproject.abrt.change-daemon-settings");
-    if (polkit_result == PolkitYes)
-    {
-//TODO: report success/failure
-        LoadPlugin(pName);
-    } else
-    {
-        log("User %s not authorized, returned %d", pDBUSSender, polkit_result);
-    }
+    LoadPlugin(pName);
 }
 
 void CPluginManager::UnRegisterPluginDBUS(const char *pName, const char *pDBUSSender)
 {
-    int polkit_result = polkit_check_authorization(pDBUSSender,
-                           "org.fedoraproject.abrt.change-daemon-settings");
-    if (polkit_result == PolkitYes)
-    {
-        UnLoadPlugin(pName);
-    } else
-    {
-        log("user %s not authorized, returned %d", pDBUSSender, polkit_result);
-    }
+    UnLoadPlugin(pName);
 }
 #endif
 

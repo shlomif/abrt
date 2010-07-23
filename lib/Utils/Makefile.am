@@ -55,8 +55,7 @@ libABRTdUtils_la_SOURCES = \
     $(HEADER_DIR)/comm_layer_inner.h CommLayerInner.cpp \
     abrt_rh_support.h abrt_rh_support.cpp \
     abrt_curl.h abrt_curl.cpp \
-    $(HEADER_DIR)/plugin.h Plugin.cpp \
-    Polkit.h Polkit.cpp
+    $(HEADER_DIR)/plugin.h Plugin.cpp
 
 libABRTdUtils_la_CPPFLAGS = \
     -Wall -Werror \
@@ -67,14 +66,12 @@ libABRTdUtils_la_CPPFLAGS = \
     -DCONF_DIR=\"$(CONF_DIR)\" \
     -DVAR_RUN=\"$(VAR_RUN)\" \
     $(CURL_CFLAGS) \
-    $(POLKIT_CFLAGS) \
     $(LIBXML_CFLAGS) \
     -D_GNU_SOURCE
 libABRTdUtils_la_LDFLAGS = \
     -version-info 0:1:0
 libABRTdUtils_la_LIBADD = \
     $(CURL_LIBS) \
-    $(POLKIT_LIBS) \
     $(LIBXML_LIBS) \
     -ldl
 

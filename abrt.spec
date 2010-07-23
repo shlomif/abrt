@@ -35,7 +35,6 @@ BuildRequires: file-devel
 BuildRequires: python-devel
 BuildRequires: gettext
 BuildRequires: libxml2-devel
-BuildRequires: polkit-devel
 BuildRequires: libzip-devel, libtar-devel, bzip2-devel, zlib-devel
 BuildRequires: intltool
 BuildRequires: bison
@@ -314,7 +313,6 @@ fi
 %{_mandir}/man5/%{name}.conf.5.gz
 #%{_mandir}/man5/pyhook.conf.5.gz
 %{_mandir}/man7/%{name}-plugins.7.gz
-%{_datadir}/polkit-1/actions/org.fedoraproject.abrt.policy
 %{_datadir}/dbus-1/system-services/com.redhat.abrt.service
 %config(noreplace) %{_sysconfdir}/%{name}/plugins/SQLite3.conf
 %{_libdir}/%{name}/libSQLite3.so*

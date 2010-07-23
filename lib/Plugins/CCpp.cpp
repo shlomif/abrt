@@ -28,7 +28,6 @@
 #include "abrt_exception.h"
 #include "debug_dump.h"
 #include "comm_layer_inner.h"
-#include "Polkit.h"
 #include "backtrace.h"
 #include "CCpp_sha1.h"
 
@@ -676,35 +675,6 @@ string CAnalyzerCCpp::GetGlobalUUID(const char *pDebugDumpDir)
     }
 }
 
-static bool DebuginfoCheckPolkit(uid_t uid)
-{
-    fflush(NULL);
-    int child_pid = fork();
-    if (child_pid < 0)
-    {
-        perror_msg_and_die("fork");
-    }
-    if (child_pid == 0)
-    {
-        //child
-        xsetreuid(uid, uid);
-        PolkitResult result = polkit_check_authorization(getpid(),
-                 "org.fedoraproject.abrt.install-debuginfos");
-        exit(result != PolkitYes); //exit 1 (failure) if not allowed
-    }
-
-    //parent
-    int status;
-    if (waitpid(child_pid, &status, 0) > 0
-     && WIFEXITED(status)
-     && WEXITSTATUS(status) == 0
-    ) {
-        return true; //authorization OK
-    }
-    log("UID %d is not authorized to install debuginfos", uid);
-    return false;
-}
-
 void CAnalyzerCCpp::CreateReport(const char *pDebugDumpDir, int force)
 {
     string package, executable, UID;
@@ -738,7 +708,7 @@ void CAnalyzerCCpp::CreateReport(const char *pDebugDumpDir, int force)
     dd.Close(); /* do not keep dir locked longer than needed */
 
     string build_ids;
-    if (m_bInstallDebugInfo && DebuginfoCheckPolkit(xatoi_u(UID.c_str())))
+    if (m_bInstallDebugInfo)
     {
         if (m_nDebugInfoCacheMB > 0)
             trim_debuginfo_cache(m_nDebugInfoCacheMB);

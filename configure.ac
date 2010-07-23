@@ -51,8 +51,6 @@ PKG_CHECK_MODULES([LIBXML], [libxml-2.0])
 PKG_CHECK_MODULES([RPM], [rpm])
 PKG_CHECK_MODULES([CURL], [libcurl])
 PKG_CHECK_MODULES([LIBNOTIFY], [libnotify])
-#PKG_CHECK_MODULES([NSS], [nss])
-PKG_CHECK_MODULES([POLKIT],[polkit-gobject-1])
 PKG_CHECK_MODULES([ZIP],[libzip])
 
 AC_CHECK_HEADER([libtar.h], [],
