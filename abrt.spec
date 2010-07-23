@@ -31,8 +31,6 @@ BuildRequires: sqlite-devel > 3.0
 BuildRequires: desktop-file-utils
 #BuildRequires: nss-devel
 BuildRequires: libnotify-devel
-BuildRequires: xmlrpc-c-devel
-BuildRequires: xmlrpc-c-client
 BuildRequires: file-devel
 BuildRequires: python-devel
 BuildRequires: gettext
@@ -141,14 +139,6 @@ Requires: %{name} = %{version}-%{release}
 %description plugin-sosreport
 Plugin to include an sosreport in an abrt report.
 
-%package plugin-bugzilla
-Summary: %{name}'s bugzilla plugin
-Group: System Environment/Libraries
-Requires: %{name} = %{version}-%{release}
-
-%description plugin-bugzilla
-Plugin to report bugs into the bugzilla.
-
 %package plugin-rhtsupport
 Summary: %{name}'s RHTSupport plugin
 Group: System Environment/Libraries
@@ -194,7 +184,7 @@ Group: User Interface/Desktops
 Requires: %{name} = %{version}-%{release}
 Requires: %{name}-addon-kerneloops
 Requires: %{name}-addon-ccpp, %{name}-addon-python
-Requires: %{name}-plugin-bugzilla, %{name}-plugin-logger, %{name}-plugin-runapp
+Requires: %{name}-plugin-logger, %{name}-plugin-runapp
 
 %description cli
 This package contains simple command line client for controlling abrt daemon over
@@ -214,7 +204,7 @@ Requires: %{name}-addon-ccpp, %{name}-addon-python
 # Default config of addon-ccpp requires gdb
 Requires: gdb >= 7.0-3
 Requires: %{name}-gui
-Requires: %{name}-plugin-logger, %{name}-plugin-bugzilla, %{name}-plugin-runapp
+Requires: %{name}-plugin-logger, %{name}-plugin-runapp
 #Requires: %{name}-plugin-firefox
 Obsoletes: bug-buddy
 Provides: bug-buddy
@@ -395,14 +385,6 @@ fi
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/%{name}/plugins/SOSreport.conf
 %{_libdir}/%{name}/libSOSreport.so*
-
-
-%files plugin-bugzilla
-%defattr(-,root,root,-)
-%config(noreplace) %{_sysconfdir}/%{name}/plugins/Bugzilla.conf
-%{_libdir}/%{name}/libBugzilla.so*
-%{_libdir}/%{name}/Bugzilla.glade
-%{_mandir}/man7/%{name}-Bugzilla.7.gz
 
 %files plugin-rhtsupport
 %defattr(-,root,root,-)

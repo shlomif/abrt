@@ -22,8 +22,6 @@
 #include <string>
 #include <sys/inotify.h>
 #include <sys/ioctl.h> /* ioctl(FIONREAD) */
-#include <xmlrpc-c/base.h>
-#include <xmlrpc-c/client.h>
 #include <glib.h>
 #if HAVE_CONFIG_H
     #include <config.h>
@@ -844,13 +842,6 @@ int main(int argc, char** argv)
         VERB1 log("Loading settings");
         if (LoadSettings() != 0)
             throw 1;
-
-        VERB1 log("Initializing XML-RPC library");
-        xmlrpc_env env;
-        xmlrpc_env_init(&env);
-        xmlrpc_client_setup_global_const(&env);
-        if (env.fault_occurred)
-            error_msg_and_die("XML-RPC Fault: %s(%d)", env.fault_string, env.fault_code);
 
         VERB1 log("Creating glib main loop");
         pMainloop = g_main_loop_new(NULL, FALSE);

@@ -10,19 +10,12 @@ pluginslib_LTLIBRARIES = \
     libKerneloopsReporter.la \
     libRunApp.la \
     libSOSreport.la \
-    libBugzilla.la \
     libRHTSupport.la \
     libReportUploader.la \
     libPython.la \
     libFileTransfer.la
 
-dist_pluginslib_DATA = \
-    Logger.glade \
-    Mailx.glade \
-    Bugzilla.glade \
-    RHTSupport.glade \
-    ReportUploader.glade \
-    KerneloopsReporter.glade
+dist_pluginslib_DATA =
 
 pluginsconfdir = $(PLUGINS_CONF_DIR)
 dist_pluginsconf_DATA = \
@@ -31,7 +24,6 @@ dist_pluginsconf_DATA = \
     SQLite3.conf \
     Logger.conf \
     Kerneloops.conf \
-    Bugzilla.conf \
     RHTSupport.conf \
     ReportUploader.conf \
     FileTransfer.conf \
@@ -40,7 +32,6 @@ dist_pluginsconf_DATA = \
 
 man_MANS = \
     abrt-FileTransfer.7 \
-    abrt-Bugzilla.7 \
     abrt-KerneloopsScanner.7 \
     abrt-KerneloopsReporter.7 \
     abrt-Logger.7 \
@@ -56,7 +47,6 @@ $(DESTDIR)/$(DEBUG_INFO_DIR):
 	$(mkdir_p) '$@'
 
 install-data-hook: $(DESTDIR)/$(DEBUG_INFO_DIR)
-	chmod 0600 $(DESTDIR)$(sysconfdir)/abrt/plugins/Bugzilla.conf
 	sed 's: = /var/: = $(localstatedir)/:g' -i \
 	    $(DESTDIR)$(sysconfdir)/abrt/plugins/SQLite3.conf \
 	    $(DESTDIR)$(sysconfdir)/abrt/plugins/Logger.conf
@@ -110,15 +100,6 @@ libRunApp_la_LDFLAGS = -avoid-version
 # SOSreport
 libSOSreport_la_SOURCES = SOSreport.cpp SOSreport.h
 libSOSreport_la_LDFLAGS = -avoid-version
-
-# Bugzilla
-libBugzilla_la_SOURCES = Bugzilla.h Bugzilla.cpp
-libBugzilla_la_LIBADD = $(XMLRPC_LIBS) $(XMLRPC_CLIENT_LIBS)
-libBugzilla_la_LDFLAGS = -avoid-version
-libBugzilla_la_CPPFLAGS = $(XMLRPC_CFLAGS) $(XMLRPC_CLIENT_CFLAGS) \
-    -I$(srcdir)/../../inc -I$(srcdir)/../Utils \
-    -DPLUGINS_LIB_DIR=\"$(PLUGINS_LIB_DIR)\" \
-    -DPLUGINS_CONF_DIR=\"$(PLUGINS_CONF_DIR)\"
 
 # RHTSupport
 libRHTSupport_la_SOURCES = RHTSupport.h RHTSupport.cpp

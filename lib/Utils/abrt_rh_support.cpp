@@ -23,7 +23,6 @@
 #include <curl/curl.h>
 #include "abrtlib.h"
 #include "abrt_curl.h"
-#include "abrt_xmlrpc.h"
 #include "abrt_exception.h"
 #include "abrt_rh_support.h"
 
