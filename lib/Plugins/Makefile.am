@@ -12,8 +12,7 @@ pluginslib_LTLIBRARIES = \
     libSOSreport.la \
     libRHTSupport.la \
     libReportUploader.la \
-    libPython.la \
-    libFileTransfer.la
+    libPython.la
 
 dist_pluginslib_DATA =
 
@@ -26,12 +25,10 @@ dist_pluginsconf_DATA = \
     Kerneloops.conf \
     RHTSupport.conf \
     ReportUploader.conf \
-    FileTransfer.conf \
     Python.conf \
     SOSreport.conf
 
 man_MANS = \
-    abrt-FileTransfer.7 \
     abrt-KerneloopsScanner.7 \
     abrt-KerneloopsReporter.7 \
     abrt-Logger.7 \
@@ -122,9 +119,3 @@ libPython_la_SOURCES = Python.h Python.cpp Python_hash.h Python_hash.cpp
 #libPython_la_LIBADD = $(NSS_LIBS)
 libPython_la_LDFLAGS = -avoid-version
 libPython_la_CPPFLAGS = -I$(srcdir)/../../inc -I$(srcdir)/../Utils
-
-# FileTrasfer
-libFileTransfer_la_SOURCES = FileTransfer.cpp FileTransfer.h
-libFileTransfer_la_LDFLAGS = -avoid-version -ltar -lbz2 -lz
-libFileTransfer_la_LIBADD = $(CURL_LIBS) $(ZIP_LIBS)
-libFileTransfer_la_CPPFLAGS = -I$(srcdir)/../../inc -I$(srcdir)/../Utils $(CURL_CFLAGS) -DDEBUG_DUMPS_DIR=\"$(DEBUG_DUMPS_DIR)\"

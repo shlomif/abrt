@@ -159,14 +159,6 @@ Obsoletes: abrt-plugin-ticketuploader
 %description plugin-reportuploader
 Plugin to report bugs into anonymous FTP site associated with ticketing system.
 
-%package plugin-filetransfer
-Summary: %{name}'s File Transfer plugin
-Group: System Environment/Libraries
-Requires: %{name} = %{version}-%{release}
-
-%description plugin-filetransfer
-Plugin to uploading files to a server.
-
 %package addon-python
 Summary: %{name}'s addon for catching and analyzing Python exceptions
 Group: System Environment/Libraries
@@ -398,12 +390,6 @@ fi
 %{_libdir}/%{name}/libReportUploader.so*
 %{_libdir}/%{name}/ReportUploader.glade
 %{_mandir}/man7/%{name}-ReportUploader.7.gz
-
-%files plugin-filetransfer
-%defattr(-,root,root,-)
-%config(noreplace) %{_sysconfdir}/%{name}/plugins/FileTransfer.conf
-%{_libdir}/%{name}/libFileTransfer.so*
-%{_mandir}/man7/%{name}-FileTransfer.7.gz
 
 %files addon-python
 %defattr(-,root,root,-)
