@@ -24,7 +24,6 @@ URL: https://fedorahosted.org/abrt/
 Source: https://fedorahosted.org/released/%{name}/%{name}-%{version}.tar.gz
 Source1: abrt.init
 BuildRequires: dbus-devel
-BuildRequires: gtk2-devel
 BuildRequires: curl-devel
 BuildRequires: rpm-devel >= 4.6
 BuildRequires: sqlite-devel > 3.0
@@ -62,22 +61,6 @@ Requires: %{name}-libs = %{version}-%{release}
 
 %description devel
 Development libraries and headers for %{name}.
-
-%package gui
-Summary: %{name}'s gui
-Group: User Interface/Desktops
-Requires: %{name} = %{version}-%{release}
-Requires: dbus-python, pygtk2, pygtk2-libglade,
-Requires: gnome-python2-gnomevfs, gnome-python2-gnomekeyring
-# only if gtk2 version < 2.17:
-#Requires: python-sexy
-# we used to have abrt-applet, now abrt-gui includes it:
-Provides: abrt-applet = %{version}-%{release}
-Obsoletes: abrt-applet < 0.0.5
-Conflicts: abrt-applet < 0.0.5
-
-%description gui
-GTK+ wizard for convenient bug reporting.
 
 %package addon-ccpp
 Summary: %{name}'s C/C++ addon
@@ -195,7 +178,6 @@ Requires: %{name}-addon-kerneloops
 Requires: %{name}-addon-ccpp, %{name}-addon-python
 # Default config of addon-ccpp requires gdb
 Requires: gdb >= 7.0-3
-Requires: %{name}-gui
 Requires: %{name}-plugin-logger, %{name}-plugin-runapp
 #Requires: %{name}-plugin-firefox
 Obsoletes: bug-buddy
@@ -232,16 +214,6 @@ mkdir -p $RPM_BUILD_ROOT/var/run/%{name}
 mkdir -p $RPM_BUILD_ROOT/var/spool/%{name}
 mkdir -p $RPM_BUILD_ROOT/var/spool/%{name}-upload
 
-desktop-file-install \
-        --dir ${RPM_BUILD_ROOT}%{_datadir}/applications \
-        --vendor fedora \
-        --delete-original \
-        ${RPM_BUILD_ROOT}%{_datadir}/applications/%{name}.desktop
-
-desktop-file-install \
-        --dir ${RPM_BUILD_ROOT}%{_sysconfdir}/xdg/autostart \
-        src/Applet/%{name}-applet.desktop
-
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -253,13 +225,6 @@ exit 0
 %post
 /sbin/chkconfig --add %{name}d
 
-%post gui
-# update icon cache
-touch --no-create %{_datadir}/icons/hicolor || :
-if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
-fi
-
 %post libs -p /sbin/ldconfig
 
 %preun
@@ -269,12 +234,6 @@ if [ "$1" -eq "0" ] ; then
 fi
 
 %postun libs -p /sbin/ldconfig
-
-%postun gui
-touch --no-create %{_datadir}/icons/hicolor || :
-if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
-fi
 
 %posttrans
 if [ "$1" -eq "0" ]; then
@@ -320,20 +279,6 @@ fi
 %{_libdir}/lib*.so
 %{_libdir}/pkgconfig/*
 %doc doc/abrt-plugin doc/howto-write-reporter
-
-%files gui
-%defattr(-,root,root,-)
-%{_bindir}/%{name}-gui
-%dir %{_datadir}/%{name}
-# all glade, gtkbuilder and py files for gui
-%{_datadir}/%{name}/*.py*
-%{_datadir}/%{name}/*.glade
-%{_datadir}/applications/fedora-%{name}.desktop
-%{_datadir}/icons/hicolor/*/apps/*
-%{_datadir}/icons/hicolor/*/status/*
-%{_datadir}/%{name}/icons/hicolor/*/status/*
-%{_bindir}/%{name}-applet
-%{_sysconfdir}/xdg/autostart/%{name}-applet.desktop
 
 %files addon-ccpp
 %defattr(-,root,root,-)

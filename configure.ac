@@ -112,13 +112,10 @@ AC_CONFIG_FILES([
 	src/Makefile
 	src/Daemon/Makefile
 	src/Hooks/Makefile
-	src/Applet/Makefile
-	src/Gui/Makefile
 	src/CLI/Makefile
 	src/utils/Makefile
 	inc/Makefile
 	po/Makefile.in
-	icons/Makefile
 ])
 
 AC_OUTPUT
