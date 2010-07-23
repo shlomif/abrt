@@ -21,7 +21,7 @@ desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
 
 EXTRA_DIST = $(PYTHON_FILES) $(GLADE_FILES) abrt-gui $(desktop_in_files)
 
-CLEANFILES := $(notdir $(wildcard *~)) $(notdir $(wildcard *\#)) $(notdir $(wildcard \.\#*)) $(notdir $(wildcard *.pyc))
+#CLEANFILES := $(notdir $(wildcard *~)) $(notdir $(wildcard *\#)) $(notdir $(wildcard \.\#*)) $(notdir $(wildcard *.pyc))
 
 install-exec-hook:
 	for b in $(bin_SCRIPTS); do \
