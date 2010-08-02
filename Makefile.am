@@ -1,7 +1,6 @@
-ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = lib src inc po
-
-EXTRA_DIST = doc/coding-style abrt.spec abrt.pc.in doc/abrt-plugin/ doc/howto-write-reporter
+EXTRA_DIST = doc/coding-style abrt.spec abrt.pc.in doc/abrt-plugin/ doc/howto-write-reporter \
+             m4 intltool-update.in intltool-extract.in intltool-merge.in
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = abrt.pc
