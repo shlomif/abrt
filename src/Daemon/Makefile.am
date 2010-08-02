@@ -32,7 +32,7 @@ abrtd_LDADD = \
     ../../lib/Utils/libABRTdUtils.la \
     $(DL_LIBS) \
     $(DBUS_LIBS) \
-    $(RPM_LIBS)
+    -lrpm -lrpmio -lrpmdb
 
 dbusabrtconfdir = ${sysconfdir}/dbus-1/system.d/
 dist_dbusabrtconf_DATA = dbus-abrt.conf

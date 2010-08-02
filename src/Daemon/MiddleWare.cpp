@@ -670,14 +670,15 @@ static mw_result_t SavePackageDescriptionToDebugDump(
                 bool remote,
                 const char *pDebugDumpDir)
 {
-    std::string package;
+    char* rpm_pkg = NULL;
     char* packageName = NULL;
-    std::string component;
+    char* component = NULL;
     std::string scriptName; /* only if "interpreter /path/to/script" */
 
     if (strcmp(pExecutable, "kernel") == 0)
     {
-        component = package = "kernel";
+        component = xstrdup("kenel");
+        rpm_pkg = xstrdup("kernel");
         packageName = xstrdup("kernel");
     }
     else
@@ -688,7 +689,7 @@ static mw_result_t SavePackageDescriptionToDebugDump(
             return MW_BLACKLISTED;
         }
 
-        char *rpm_pkg = GetPackage(pExecutable);
+        rpm_pkg = rpm_get_package_nvr(pExecutable);
         if (rpm_pkg == NULL)
         {
             if (g_settings_bProcessUnpackaged || remote)
@@ -737,7 +738,7 @@ static mw_result_t SavePackageDescriptionToDebugDump(
             char *script_name = get_argv1_if_full_path(cmdline);
             if (script_name)
             {
-                char *script_pkg = GetPackage(script_name);
+                char *script_pkg = rpm_get_package_nvr(script_name);
                 if (script_pkg)
                 {
                     /* There is a well-formed script name in argv[1],
@@ -767,10 +768,8 @@ static mw_result_t SavePackageDescriptionToDebugDump(
             }
         }
 
-        package = rpm_pkg;
-        packageName = get_package_name_from_NVR_or_NULL(package.c_str());
+        packageName = get_package_name_from_NVR_or_NULL(rpm_pkg);
         VERB2 log("Package:'%s' short:'%s'", rpm_pkg, packageName);
-        free(rpm_pkg);
 
         if (g_settings_setBlackListedPkgs.find(packageName) != g_settings_setBlackListedPkgs.end())
         {
@@ -801,10 +800,10 @@ static mw_result_t SavePackageDescriptionToDebugDump(
             }
             */
         }
-        component = GetComponent(pExecutable);
+        component = rpm_get_component(pExecutable);
     }
 
-    std::string description = GetDescription(packageName);
+    char *dsc = rpm_get_description(packageName);
     free(packageName);
 
     char host[HOST_NAME_MAX + 1];
@@ -824,9 +823,24 @@ static mw_result_t SavePackageDescriptionToDebugDump(
     {
         CDebugDump dd;
         dd.Open(pDebugDumpDir);
-        dd.SaveText(FILENAME_PACKAGE, package.c_str());
-        dd.SaveText(FILENAME_DESCRIPTION, description.c_str());
-        dd.SaveText(FILENAME_COMPONENT, component.c_str());
+        if (rpm_pkg)
+        {
+            dd.SaveText(FILENAME_PACKAGE, rpm_pkg);
+            free(rpm_pkg);
+        }
+
+        if (dsc)
+        {
+            dd.SaveText(FILENAME_DESCRIPTION, dsc);
+            free(dsc);
+        }
+
+        if (component)
+        {
+            dd.SaveText(FILENAME_COMPONENT, component);
+            free(component);
+        }
+
         if (!remote)
             dd.SaveText(FILENAME_HOSTNAME, host);
     }

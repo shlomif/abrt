@@ -25,6 +25,7 @@
 #include <rpm/rpmcli.h>
 #include <rpm/rpmts.h>
 #include <rpm/rpmdb.h>
+#include <rpm/rpmpgp.h>
 #include "abrt_types.h"
 
 /**
@@ -75,7 +76,7 @@ bool CheckHash(const char* pPackage, const char* pPath);
  * @param pPackage A package name.
  * @return A package description.
  */
-std::string GetDescription(const char* pPackage);
+char* rpm_get_description(const char* pkg);
 /**
  * Gets a package name. This package contains particular
  * file. If the file doesn't belong to any package, empty string is
@@ -83,14 +84,14 @@ std::string GetDescription(const char* pPackage);
  * @param pFileName A file name.
  * @return A package name (malloced string)
  */
-char* GetPackage(const char* pFileName);
+char* rpm_get_package_nvr(const char* filename);
 /**
  * Finds a main package for given file. This package contains particular
  * file. If the file doesn't belong to any package, empty string is
  * returned.
  * @param pFileName A file name.
- * @return A package name.
+ * @return a malloc'ed package name. Need to be freed.
  */
-std::string GetComponent(const char* pFileName);
+char* rpm_get_component(const char* filename);
 
 #endif

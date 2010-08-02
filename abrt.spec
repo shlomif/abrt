@@ -25,7 +25,7 @@ Source: https://fedorahosted.org/released/%{name}/%{name}-%{version}.tar.gz
 Source1: abrt.init
 BuildRequires: dbus-devel
 BuildRequires: curl-devel
-BuildRequires: rpm-devel >= 4.6
+BuildRequires: rpm-devel
 BuildRequires: sqlite-devel > 3.0
 BuildRequires: desktop-file-utils
 #BuildRequires: nss-devel
