@@ -216,8 +216,8 @@ mkdir -p $RPM_BUILD_ROOT/var/spool/%{name}-upload
 rm -rf $RPM_BUILD_ROOT
 
 %pre
-getent group abrt >/dev/null || groupadd -f --system abrt
-getent passwd abrt >/dev/null || useradd --system -g abrt -d /etc/abrt -s /sbin/nologin abrt
+getent group abrt >/dev/null || groupadd -f -r abrt
+getent passwd abrt >/dev/null || useradd -r -g abrt -d /etc/abrt -s /sbin/nologin abrt
 exit 0
 
 %post
