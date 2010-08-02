@@ -40,13 +40,23 @@ static DBusMessage* send_get_reply_and_unref(DBusMessage* msg)
         error_msg_and_die("Error sending DBus message");
     dbus_message_unref(msg);
 
+    int cnt = 99; // needed only for old dbus-libs compat (see below)
     while (true)
     {
         DBusMessage *received = dbus_connection_pop_message(s_dbus_conn);
         if (!received)
         {
-            if (FALSE == dbus_connection_read_write(s_dbus_conn, -1))
+            DBusDispatchStatus s = dbus_connection_get_dispatch_status(s_dbus_conn);
+            // This is what we want to do:
+            //if (FALSE == dbus_connection_read_write(s_dbus_conn, -1))
+            //    error_msg_and_die("dbus connection closed");
+            // And this is what we forced to do to work around old
+            // dbus-libs-1.1.2, which may return FALSE even when
+            // there _is_ more data:
+            dbus_connection_read_write(s_dbus_conn, -1);
+            if (--cnt == 0)
                 error_msg_and_die("dbus connection closed");
+
             continue;
         }
 
