@@ -28,6 +28,9 @@ void check_free_space(unsigned setting_MaxCrashReportsSize, const char *dump_loc
 #define trim_debug_dumps abrt_trim_debug_dumps
 void trim_debug_dumps(const char *dirname, double cap_size, const char *exclude_path);
 
+#define exec_vp abrt_exec_vp
+char* exec_vp(char **args, uid_t uid, int redirect_stderr, int exec_timeout_sec, int *status);
+
 #ifdef __cplusplus
 }
 #endif
