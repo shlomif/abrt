@@ -13,6 +13,7 @@ bin_PROGRAMS = \
     abrt-action-analyze-oops \
     abrt-action-trim-files \
     abrt-action-generate-backtrace \
+    abrt-action-generate-canonical-backtrace \
     abrt-action-analyze-backtrace \
     abrt-retrace-client
 
@@ -169,6 +170,20 @@ abrt_action_generate_backtrace_CPPFLAGS = \
     -D_GNU_SOURCE \
     -Wall -Wwrite-strings -Werror
 abrt_action_generate_backtrace_LDADD = \
+    $(LIBREPORT_LIBS) \
+    ../lib/libabrt.la
+
+abrt_action_generate_canonical_backtrace_SOURCES = \
+    abrt-action-generate-canonical-backtrace.c
+abrt_action_generate_canonical_backtrace_CPPFLAGS = \
+    -I$(srcdir)/../include \
+    -I$(srcdir)/../lib \
+    -DLOCALSTATEDIR='"$(localstatedir)"' \
+    $(GLIB_CFLAGS) \
+    $(LIBREPORT_CFLAGS) \
+    -D_GNU_SOURCE \
+    -Wall -Wwrite-strings -Werror
+abrt_action_generate_canonical_backtrace_LDADD = \
     $(LIBREPORT_LIBS) \
     ../lib/libabrt.la
 
