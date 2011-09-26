@@ -38,6 +38,66 @@ struct fde_entry {
     unsigned length;
 };
 
+static GList *extract_addresses(const char *str)
+{
+    const char *cur = str;
+    const char *sym;
+
+    unsigned frame_number;
+    unsigned next_frame = 0;
+    unsigned long address;
+
+    int ret;
+    int chars_read;
+
+    struct backtrace_entry *entry;
+    GList *backtrace = NULL;
+
+    while (*cur)
+    {
+        /* check whether current line describes frame and if we haven't seen it
+         * already (gdb prints the first one on start) */
+        ret = sscanf(cur, "#%u 0x%lx in %n", &frame_number, &address, &chars_read);
+        if (ret < 2 || frame_number != next_frame)
+        {
+            goto eat_line;
+        }
+        next_frame++;
+        cur += chars_read;
+
+        /* is symbol available? */
+        if (*cur && *cur != '?')
+        {
+            sym = cur;
+            cur = skip_non_whitespace(cur);
+            /* XXX: we might terminate the cycle here if sym is __libc_start_main */
+        }
+        else
+        {
+            sym = NULL;
+        }
+
+        entry = xmalloc(sizeof(*entry));
+        entry->address = address;
+        entry->symbol = (sym ? xstrndup(sym, cur-sym) : NULL);
+        entry->build_id = entry->modname = NULL;
+        entry->build_id_offset = 0;
+        backtrace = g_list_append(backtrace, entry);
+
+eat_line:
+        while (*cur)
+        {
+            cur++;
+            if (*(cur-1) == '\n')
+            {
+                break;
+            }
+        }
+    }
+
+    return backtrace;
+}
+
 /* copypasted from abrt-action-generate-backtrace */
 static char *get_gdb_output(const char *dump_dir_name)
 {
@@ -153,9 +213,19 @@ int main(int argc, char **argv)
     if (gdb_out == NULL)
         return 1;
 
-    printf("%s\n", gdb_out);
-
     /* parse addresses and eventual symbols from the output*/
+    GList *backtrace = extract_addresses(gdb_out);
+    VERB1 log("Extracted %d frames from the backtrace", g_list_length(backtrace));
+    free(gdb_out);
+
+    while (backtrace)
+    {
+        printf("Addr: %lx, sym: %s\n",
+                    ((struct backtrace_entry *)backtrace->data)->address,
+                    ((struct backtrace_entry *)backtrace->data)->symbol);
+        backtrace = g_list_next(backtrace);
+    }
+
     /* eu-unstrip - build ids and library paths*/
 
     return 0;
