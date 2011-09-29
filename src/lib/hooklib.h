@@ -31,6 +31,9 @@ void trim_debug_dumps(const char *dirname, double cap_size, const char *exclude_
 #define exec_vp abrt_exec_vp
 char* exec_vp(char **args, uid_t uid, int redirect_stderr, int exec_timeout_sec, int *status);
 
+#define run_unstrip_n abrt_run_unstrip_n
+char *run_unstrip_n(const char *dump_dir_name, unsigned timeout_sec);
+
 #ifdef __cplusplus
 }
 #endif
