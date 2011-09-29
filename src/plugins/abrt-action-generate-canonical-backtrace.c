@@ -38,6 +38,101 @@ struct fde_entry {
     unsigned length;
 };
 
+static void backtrace_add_build_id(GList *backtrace, unsigned long start, unsigned length,
+            const char *build_id, unsigned build_id_len, const char *modname, unsigned modname_len)
+{
+    struct backtrace_entry *entry;
+
+    while (backtrace != NULL)
+    {
+        entry = backtrace->data;
+        if (start <= entry->address && entry->address <= start+length)
+        {
+            /* NOTE: we could get by with just one copy of the string, but that
+             * would mean more bookkeeping for us ... */
+            entry->build_id = xstrndup(build_id, build_id_len);
+            entry->build_id_offset = entry->address - start;
+            entry->modname = xstrndup(modname, modname_len);
+        }
+
+        backtrace = g_list_next(backtrace);
+    }
+}
+
+static void assign_build_ids(GList *backtrace, const char *dump_dir_name)
+{
+    /* Run eu-unstrip -n to obtain the ids. This should be rewritten to read
+     * them directly from the core. */
+    char *unstrip_output = run_unstrip_n(dump_dir_name, /*timeout_sec:*/ 30);
+    if (unstrip_output == NULL)
+        error_msg_and_die("Running eu-unstrip failed");
+
+    const char *cur = unstrip_output;
+
+    unsigned long start;
+    unsigned length;
+    const char *build_id;
+    unsigned build_id_len;
+    const char *modname;
+    unsigned modname_len;
+
+    int ret;
+    int chars_read;
+
+    while (*cur)
+    {
+        /* beginning of the line */
+
+        /* START+SIZE */
+        ret = sscanf(cur, "0x%lx+0x%x %n", &start, &length, &chars_read);
+        if (ret < 2)
+        {
+            goto eat_line;
+        }
+        cur += chars_read;
+
+        /* BUILDID */
+        build_id = cur;
+        while (isxdigit(*cur))
+        {
+            cur++;
+        }
+        build_id_len = cur-build_id;
+
+        /* there may be @ADDR after the ID */
+        cur = skip_non_whitespace(cur);
+        cur = skip_whitespace(cur);
+
+        /* FILE */
+        cur = skip_non_whitespace(cur);
+        cur = skip_whitespace(cur);
+
+        /* DEBUGFILE */
+        cur = skip_non_whitespace(cur);
+        cur = skip_whitespace(cur);
+
+        /* MODULENAME */
+        modname = cur;
+        cur = skip_non_whitespace(cur);
+        modname_len = cur-modname;
+
+        backtrace_add_build_id(backtrace, start, length,
+                    build_id, build_id_len, modname, modname_len);
+
+eat_line:
+        while (*cur)
+        {
+            cur++;
+            if (*(cur-1) == '\n')
+            {
+                break;
+            }
+        }
+    }
+
+    free(unstrip_output);
+}
+
 static GList *extract_addresses(const char *str)
 {
     const char *cur = str;
@@ -218,15 +313,19 @@ int main(int argc, char **argv)
     VERB1 log("Extracted %d frames from the backtrace", g_list_length(backtrace));
     free(gdb_out);
 
+    /* eu-unstrip - build ids and library paths*/
+    VERB1 log("Running eu-unstrip -n to obtain build ids");
+    assign_build_ids(backtrace, dump_dir_name);
+
+    struct backtrace_entry *entry;
     while (backtrace)
     {
-        printf("Addr: %lx, sym: %s\n",
-                    ((struct backtrace_entry *)backtrace->data)->address,
-                    ((struct backtrace_entry *)backtrace->data)->symbol);
+        entry = backtrace->data;
+        printf("Addr: %lx, sym: %s, bid: %s, off: %x, mod: %s\n",
+                    entry->address, entry->symbol, entry->build_id, entry->build_id_offset, entry->modname);
+
         backtrace = g_list_next(backtrace);
     }
-
-    /* eu-unstrip - build ids and library paths*/
 
     return 0;
 }
