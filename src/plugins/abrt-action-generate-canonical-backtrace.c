@@ -38,6 +38,30 @@ struct fde_entry {
     unsigned length;
 };
 
+#define OR_UNKNOWN(s) ((s) ? (s) : "UNKNOWN")
+
+static char *backtrace_format(GList *backtrace)
+{
+    struct strbuf *strbuf = strbuf_new();
+    struct backtrace_entry *entry;
+
+    while (backtrace != NULL)
+    {
+        entry = backtrace->data;
+
+        /* BUILD_ID+OFFSET SYMBOL MODNAME FINGERPRINT */
+        strbuf_append_strf(strbuf, "%s+0x%x %s %s\n",
+                    OR_UNKNOWN(entry->build_id),
+                    entry->build_id_offset,
+                    OR_UNKNOWN(entry->symbol),
+                    OR_UNKNOWN(entry->modname));
+
+        backtrace = g_list_next(backtrace);
+    }
+
+    return strbuf_free_nobuf(strbuf);
+}
+
 static void backtrace_add_build_id(GList *backtrace, unsigned long start, unsigned length,
             const char *build_id, unsigned build_id_len, const char *modname, unsigned modname_len)
 {
@@ -317,15 +341,15 @@ int main(int argc, char **argv)
     VERB1 log("Running eu-unstrip -n to obtain build ids");
     assign_build_ids(backtrace, dump_dir_name);
 
-    struct backtrace_entry *entry;
-    while (backtrace)
-    {
-        entry = backtrace->data;
-        printf("Addr: %lx, sym: %s, bid: %s, off: %x, mod: %s\n",
-                    entry->address, entry->symbol, entry->build_id, entry->build_id_offset, entry->modname);
+    struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ 0);
+    if (!dd)
+        return 1;
 
-        backtrace = g_list_next(backtrace);
-    }
+    char *formated_backtrace = backtrace_format(backtrace);
+    dd_save_text(dd, FILENAME_CANONICAL_BACKTRACE, formated_backtrace);
+    free(formated_backtrace);
+
+    dd_close(dd);
 
     return 0;
 }
