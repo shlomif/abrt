@@ -27,6 +27,7 @@ struct backtrace_entry {
     unsigned build_id_offset;
     char *symbol;
     char *modname;
+    char *filename;
     char *fingerprint;
     /* fde_entry ptr? */
     /* linked list next ptr? */
@@ -63,7 +64,8 @@ static char *backtrace_format(GList *backtrace)
 }
 
 static void backtrace_add_build_id(GList *backtrace, unsigned long start, unsigned length,
-            const char *build_id, unsigned build_id_len, const char *modname, unsigned modname_len)
+            const char *build_id, unsigned build_id_len, const char *modname, unsigned modname_len,
+            const char *filename, unsigned filename_len)
 {
     struct backtrace_entry *entry;
 
@@ -77,6 +79,7 @@ static void backtrace_add_build_id(GList *backtrace, unsigned long start, unsign
             entry->build_id = xstrndup(build_id, build_id_len);
             entry->build_id_offset = entry->address - start;
             entry->modname = xstrndup(modname, modname_len);
+            entry->filename = xstrndup(filename, filename_len);
         }
 
         backtrace = g_list_next(backtrace);
@@ -99,6 +102,8 @@ static void assign_build_ids(GList *backtrace, const char *dump_dir_name)
     unsigned build_id_len;
     const char *modname;
     unsigned modname_len;
+    const char *filename;
+    unsigned filename_len;
 
     int ret;
     int chars_read;
@@ -128,7 +133,9 @@ static void assign_build_ids(GList *backtrace, const char *dump_dir_name)
         cur = skip_whitespace(cur);
 
         /* FILE */
+        filename = cur;
         cur = skip_non_whitespace(cur);
+        filename_len = cur-filename;
         cur = skip_whitespace(cur);
 
         /* DEBUGFILE */
@@ -141,7 +148,8 @@ static void assign_build_ids(GList *backtrace, const char *dump_dir_name)
         modname_len = cur-modname;
 
         backtrace_add_build_id(backtrace, start, length,
-                    build_id, build_id_len, modname, modname_len);
+                    build_id, build_id_len, modname, modname_len,
+                    filename, filename_len);
 
 eat_line:
         while (*cur)
@@ -199,7 +207,7 @@ static GList *extract_addresses(const char *str)
         entry = xmalloc(sizeof(*entry));
         entry->address = address;
         entry->symbol = (sym ? xstrndup(sym, cur-sym) : NULL);
-        entry->build_id = entry->modname = NULL;
+        entry->build_id = entry->modname = entry->filename = NULL;
         entry->build_id_offset = 0;
         backtrace = g_list_append(backtrace, entry);
 
