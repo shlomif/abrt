@@ -185,6 +185,8 @@ abrt_action_generate_canonical_backtrace_CPPFLAGS = \
     -Wall -Wwrite-strings -Werror
 abrt_action_generate_canonical_backtrace_LDADD = \
     $(LIBREPORT_LIBS) \
+    -lelf \
+    -ldw \
     ../lib/libabrt.la
 
 abrt_action_analyze_backtrace_SOURCES = \

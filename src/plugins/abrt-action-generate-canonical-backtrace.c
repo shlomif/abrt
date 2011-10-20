@@ -18,6 +18,11 @@
 */
 #include "abrtlib.h"
 
+#include <libelf.h>
+#include <gelf.h>
+#include <elfutils/libdw.h>
+#include <dwarf.h>
+
 /* 60 seconds was too limiting on slow machines */
 static int exec_timeout_sec = 240;
 
@@ -29,14 +34,8 @@ struct backtrace_entry {
     char *modname;
     char *filename;
     char *fingerprint;
-    /* fde_entry ptr? */
-    /* linked list next ptr? */
-    /* pointer to function disassembly? */
-};
-
-struct fde_entry {
-    unsigned long start;
-    unsigned length;
+    unsigned long function_initial_loc;
+    unsigned function_length;
 };
 
 #define OR_UNKNOWN(s) ((s) ? (s) : "UNKNOWN")
@@ -51,11 +50,15 @@ static char *backtrace_format(GList *backtrace)
         entry = backtrace->data;
 
         /* BUILD_ID+OFFSET SYMBOL MODNAME FINGERPRINT */
-        strbuf_append_strf(strbuf, "%s+0x%x %s %s\n",
+        strbuf_append_strf(strbuf, "%s+0x%x %s %s 0x%lx[0x%x]\n",
                     OR_UNKNOWN(entry->build_id),
                     entry->build_id_offset,
                     OR_UNKNOWN(entry->symbol),
-                    OR_UNKNOWN(entry->modname));
+                    OR_UNKNOWN(entry->modname),
+
+                    /* Debug only, fingerprint will come here: */
+                    entry->function_initial_loc,
+                    entry->function_length);
 
         backtrace = g_list_next(backtrace);
     }
@@ -209,6 +212,7 @@ static GList *extract_addresses(const char *str)
         entry->symbol = (sym ? xstrndup(sym, cur-sym) : NULL);
         entry->build_id = entry->modname = entry->filename = NULL;
         entry->build_id_offset = 0;
+        entry->function_initial_loc = entry->function_length = 0;
         backtrace = g_list_append(backtrace, entry);
 
 eat_line:
@@ -308,6 +312,435 @@ static char *get_gdb_output(const char *dump_dir_name)
     return bt;
 }
 
+/* Read len bytes and interpret them as a number. Pointer p does not have to be
+ * aligned.
+ * XXX Assumption: we'll always run on architecture the ELF is run on,
+ * therefore we don't consider byte order.
+ */
+static unsigned long fde_read_address(const uint8_t *p, unsigned len)
+{
+    int i;
+    union {
+        uint8_t b[8];
+        /* uint16_t n2; */
+        uint32_t n4;
+        uint64_t n8;
+    } u;
+
+    for (i = 0; i < len; i++)
+    {
+        u.b[i] = *p++;
+    }
+
+    return (len == 4 ? (unsigned long)u.n4 : (unsigned long)u.n8);
+}
+
+/* Given DWARF pointer encoding, return the length of the pointer in bytes.
+ */
+static unsigned encoded_size(const uint8_t encoding, const unsigned char *e_ident)
+{
+    switch (encoding & 0x07)
+    {
+        case DW_EH_PE_udata2:
+            return 2;
+        case DW_EH_PE_udata4:
+            return 4;
+        case DW_EH_PE_udata8:
+            return 8;
+        case DW_EH_PE_absptr:
+            return (e_ident[EI_CLASS] == ELFCLASS32 ? 4 : 8);
+        default:
+            return 0; /* Don't know/care. */
+    }
+}
+
+#define log_elf_error(function) log("%s failed for %s: %s", function, filename, elf_errmsg(-1))
+
+/* TODO: sensible types */
+/* Load ELF 'filename', parse the .eh_frame contents, and for each entry in the
+ * second argument check whether its address is contained in the range of some
+ * Frame Description Entry. If it does, fill in the function range of the
+ * entry. In other words, try to assign start address and length of function
+ * corresponding to each backtrace entry. We'll need that for the disassembly.
+ *
+ * Fails quietly - we should still be able to use the build ids.
+ *
+ * I wonder if this is really better than parsing eu-readelf text output.
+ */
+static void elf_iterate_fdes(const char *filename, GList *entries)
+{
+    int fd;
+    Elf *e;
+    const unsigned char *e_ident;
+    const char *scnname;
+    Elf_Scn *scn;
+    Elf_Data *scn_data;
+    GElf_Shdr shdr;
+    GElf_Phdr phdr;
+    size_t shstrndx, phnum;
+    unsigned long exec_base = 1; /* Hopefully invalid offset. */
+
+    /* Initialize libelf, open the file and get its Elf handle. */
+    if (elf_version(EV_CURRENT) == EV_NONE)
+    {
+        VERB1 log_elf_error("elf_version");
+        return;
+    }
+
+    fd = xopen(filename, O_RDONLY);
+
+    e = elf_begin(fd, ELF_C_READ, NULL);
+    if (e == NULL)
+    {
+        VERB1 log_elf_error("elf_begin");
+        goto ret_close;
+    }
+
+    e_ident = (unsigned char *)elf_getident(e, NULL);
+    if (e_ident == NULL)
+    {
+        VERB1 log_elf_error("elf_getident");
+        goto ret_elf;
+    }
+
+    /* Look up the .eh_frame section */
+    if (elf_getshdrstrndx(e, &shstrndx) != 0)
+    {
+        VERB1 log_elf_error("elf_getshdrstrndx");
+        goto ret_elf;
+    }
+
+    scn = NULL;
+    while ((scn = elf_nextscn(e, scn)) != NULL)
+    {
+        if (gelf_getshdr(scn, &shdr) != &shdr)
+        {
+            VERB1 log_elf_error("gelf_getshdr");
+            continue;
+        }
+
+        scnname = elf_strptr(e, shstrndx, shdr.sh_name);
+        if (scnname == NULL)
+        {
+            VERB1 log_elf_error("elf_strptr");
+            continue;
+        }
+
+        if (strcmp(scnname, ".eh_frame") == 0)
+        {
+            break; /* Found. */
+        }
+    }
+
+    if (scn == NULL)
+    {
+        VERB1 log("Section .eh_frame not found in %s", filename);
+        goto ret_elf;
+    }
+
+    scn_data = elf_getdata(scn, NULL);
+    if (scn_data == NULL)
+    {
+        VERB1 log_elf_error("elf_getdata");
+        goto ret_elf;
+    }
+
+    /* Get the address at which the executable segment is loaded. If the
+     * .eh_frame addresses are absolute, this is used to convert them to
+     * relative to the beginning of executable segment. We are looking for the
+     * first LOAD segment that is executable, I hope this is sufficient.
+     */
+    if (elf_getphdrnum(e, &phnum) != 0)
+    {
+        VERB1 log_elf_error("elf_getphdrnum");
+        goto ret_elf;
+    }
+
+    int i;
+    for (i = 0; i < phnum; i++)
+    {
+        if (gelf_getphdr(e, i, &phdr) != &phdr)
+        {
+            VERB1 log_elf_error("gelf_getphdr");
+            goto ret_elf;
+        }
+
+        if (phdr.p_type == PT_LOAD && phdr.p_flags & PF_X)
+        {
+            exec_base = (unsigned long)phdr.p_vaddr;
+            break;
+        }
+    }
+
+    if (exec_base == 1)
+    {
+        VERB1 log("Unable to determine executable base for %s", filename);
+        goto ret_elf;
+    }
+
+    /* We now have a handle to .eh_frame data. We'll use dwarf_next_cfi to
+     * iterate through all FDEs looking for those matching the addresses we
+     * have.
+     * Some info on .eh_frame can be found at http://www.airs.com/blog/archives/460
+     * and in DWARF documentation for .debug_frame. The initial_location and
+     * address_range decoding is 'inspired' by elfutils source.
+     * XXX: If this linear scan is too slow, we can do binary search on
+     * .eh_frame_hdr -- see http://www.airs.com/blog/archives/462
+     */
+    int ret;
+    Dwarf_Off cfi_offset;
+    Dwarf_Off cfi_offset_next = 0;
+    Dwarf_CFI_Entry cfi;
+
+    struct cie_encoding {
+        Dwarf_Off cie_offset;
+        int ptr_len;
+        bool pcrel;
+    } *cie;
+    GList *cie_list = NULL;
+
+    while(1)
+    {
+        cfi_offset = cfi_offset_next;
+        ret = dwarf_next_cfi(e_ident, scn_data, 1, cfi_offset, &cfi_offset_next, &cfi);
+
+        if (ret > 0)
+        {
+            /* We're at the end. */
+            break;
+        }
+
+        if (ret < 0)
+        {
+            /* Error. If cfi_offset_next was updated, we may skip the
+             * errorneous cfi. */
+            if (cfi_offset_next > cfi_offset)
+            {
+                continue;
+            }
+            VERB1 log("dwarf_next_cfi failed for %s: %s", filename, dwarf_errmsg(-1));
+            goto ret_list;
+        }
+
+        if (dwarf_cfi_cie_p(&cfi))
+        {
+            /* Current CFI is a CIE. We store its offset and FDE encoding
+             * attributes to be used when reading FDEs.
+             */
+
+            /* Default FDE encoding (i.e. no R in augmentation string) is
+             * DW_EH_PE_absptr.
+             */
+            cie = xmalloc(sizeof(*cie));
+            cie->cie_offset = cfi_offset;
+            cie->ptr_len = encoded_size(DW_EH_PE_absptr, e_ident);
+            cie->pcrel = 0;
+
+            /* Search the augmentation data for FDE pointer encoding.
+             * Unfortunately, 'P' can come before 'R' (which we are looking
+             * for), so we may have to parse the whole thing. See the
+             * abovementioned blog post for details.
+             */
+            const char *aug = cfi.cie.augmentation;
+            const uint8_t *augdata = cfi.cie.augmentation_data;
+            bool skip_cie = 0;
+            if (*aug == 'z')
+            {
+                aug++;
+            }
+            while (*aug != '\0')
+            {
+                if(*aug == 'R')
+                {
+                    cie->ptr_len = encoded_size(*augdata, e_ident);
+
+                    if (cie->ptr_len != 4 && cie->ptr_len != 8)
+                    {
+                        VERB1 log("Unknown FDE encoding (CIE %lx) in %s",
+                                (unsigned long)cfi_offset, filename);
+                        skip_cie = 1;
+                    }
+                    if ((*augdata & 0x70) == DW_EH_PE_pcrel)
+                    {
+                        cie->pcrel = 1;
+                    }
+                    break;
+                }
+                else if (*aug == 'L')
+                {
+                    augdata++;
+                }
+                else if (*aug == 'P')
+                {
+                    unsigned size = encoded_size(*augdata, e_ident);
+                    if (size == 0)
+                    {
+                        VERB1 log("Unknown size for personality encoding in %s",
+                                filename);
+                        skip_cie = 1;
+                        break;
+                    }
+                    augdata += (size + 1);
+                }
+                else
+                {
+                    VERB1 log("Unknown augmentation char in %s", filename);
+                    skip_cie = 1;
+                    break;
+                }
+                aug++;
+            }
+            if (skip_cie)
+            {
+                free(cie);
+                continue;
+            }
+
+            cie_list = g_list_append(cie_list, cie);
+        }
+        else
+        {
+            /* Current CFI is an FDE.
+             */
+            GList *it = cie_list;
+            cie = NULL;
+
+            /* Find the CIE data that we should have saved earlier. XXX: We can
+             * use hash table/tree to speed up the search, the number of CIEs
+             * should usally be very low though. */
+            while (it != NULL)
+            {
+                cie = it->data;
+
+                /* In .eh_frame, CIE_pointer is relative, but libdw converts it
+                 * to absolute offset. */
+                if(cfi.fde.CIE_pointer == cie->cie_offset)
+                {
+                    break; /* Found. */
+                }
+
+                it = g_list_next(it);
+            }
+
+            if (it == NULL)
+            {
+                VERB1 log("CIE not found for FDE %lx in %s",
+                        (unsigned long)cfi_offset, filename);
+                continue;
+            }
+
+            /* Read the two numbers we need and if they are PC-relative,
+             * compute the offset from VMA base
+             */
+
+            unsigned long initial_location = fde_read_address(cfi.fde.start, cie->ptr_len);
+            unsigned long address_range = fde_read_address(cfi.fde.start+cie->ptr_len, cie->ptr_len);
+
+            if (cie->pcrel)
+            {
+                /* We need to determine how long is the 'length' (and
+                 * consequently CIE id) field of this FDE -- it can be either 4
+                 * or 12 bytes long. */
+                unsigned long length = fde_read_address(scn_data->d_buf + cfi_offset, 4);
+                uint64_t skip = (length == 0xffffffffUL ? 12 : 4);
+
+                uint64_t mask = (cie->ptr_len == 4 ? 0xffffffffUL : 0xffffffffffffffffUL);
+                initial_location += (unsigned long)shdr.sh_offset + (uint64_t)cfi_offset + 2*skip;
+                initial_location &= mask;
+            }
+            else
+            {
+                /* Assuming that not pcrel means absolute address (what if the file is a library?).
+                 * Convert to text-section-start-relative.
+                 */
+                initial_location -= exec_base;
+            }
+
+            /* Iterate through the backtrace entries and check each address
+             * member whether it belongs into the range given by current FDE.
+             */
+            for (it = entries; it != NULL; it = g_list_next(it))
+            {
+                struct backtrace_entry *entry = it->data;
+                if (initial_location <= entry->build_id_offset
+                        && entry->build_id_offset < initial_location + address_range)
+                {
+                    entry->function_initial_loc = initial_location;
+                    entry->function_length = address_range;
+                    /*TODO: remove the entry from the list to save a bit of time in next iteration?*/
+                }
+            }
+        }
+    }
+
+ret_list:
+    list_free_with_free(cie_list);
+ret_elf:
+    elf_end(e);
+ret_close:
+    close(fd);
+}
+
+static gint filename_cmp(const struct backtrace_entry *entry, const char *filename)
+{
+    return (entry->filename ? strcmp(filename, entry->filename) : 1);
+}
+
+static void extract_function_ranges(GList *backtrace, const char *executable)
+{
+    GList *to_be_done = g_list_copy(backtrace);
+    GList *worklist, *it;
+    const char *filename;
+    struct backtrace_entry *entry;
+    int is_executable;
+
+    /* Process each element */
+    /* We call elf_iterate_fdes on sublists of backtrace such that they are from the same file. */
+    while (to_be_done != NULL)
+    {
+        /* Take first entry */
+        entry = to_be_done->data;
+        filename = entry->filename;
+        is_executable = ((entry->modname != NULL && strcmp(entry->modname, "[exe]") == 0) ? 1 : 0);
+        worklist = NULL;
+
+        /* Skip useless filenames, but keep entries with filename "-" and modname "[exe]" */
+        if (filename == NULL
+            || (strcmp(filename, "-") == 0 && !is_executable))
+        {
+            to_be_done = g_list_remove(to_be_done, entry);
+            continue;
+        }
+
+        /* Find entries with the same filename */
+        while ((it = g_list_find_custom(to_be_done, filename, (GCompareFunc)filename_cmp)) != NULL)
+        {
+            entry = it->data;
+
+            /* Add it to the worklist */
+            worklist = g_list_append(worklist, entry);
+
+            /* Remove it from the list of remaining elements */
+            to_be_done = g_list_remove(to_be_done, entry);
+        }
+
+        /* This should never happen, but if it does, we end up in an infinite loop. */
+        if (worklist == NULL)
+        {
+            VERB1 log("extract_function_ranges internal error");
+            return;
+        }
+
+        if (is_executable)
+        {
+            filename = executable;
+        }
+
+        /* Process the worklist */
+        elf_iterate_fdes(filename, worklist);
+    }
+}
+
 int main(int argc, char **argv)
 {
     abrt_init(argv);
@@ -352,6 +785,12 @@ int main(int argc, char **argv)
     struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ 0);
     if (!dd)
         return 1;
+
+    char *executable = dd_load_text(dd, FILENAME_EXECUTABLE);
+
+    /* Extract address ranges from all the executables in the backtrace*/
+    VERB1 log("Extracting function ranges from ELF executables");
+    extract_function_ranges(backtrace, executable);
 
     char *formated_backtrace = backtrace_format(backtrace);
     dd_save_text(dd, FILENAME_CANONICAL_BACKTRACE, formated_backtrace);

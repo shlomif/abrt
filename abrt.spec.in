@@ -41,6 +41,8 @@ BuildRequires: asciidoc
 BuildRequires: xmlto
 BuildRequires: libreport-devel
 BuildRequires: btparser-devel
+BuildRequires: elfutils-devel
+BuildRequires: elfutils-libelf-devel
 
 %if %{with systemd}
 Requires: systemd-units
@@ -90,7 +92,7 @@ GTK+ wizard for convenient bug reporting.
 %package addon-ccpp
 Summary: %{name}'s C/C++ addon
 Group: System Environment/Libraries
-Requires: elfutils, cpio
+Requires: elfutils, elfutils-libelf, elfutils-libs, cpio
 Requires: %{name} = %{version}-%{release}
 
 %description addon-ccpp
