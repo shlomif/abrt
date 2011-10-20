@@ -27,15 +27,15 @@
 static int exec_timeout_sec = 240;
 
 struct backtrace_entry {
-    unsigned long address;
+    uintptr_t address;
     char *build_id;
-    unsigned build_id_offset;
+    uintptr_t build_id_offset;
     char *symbol;
     char *modname;
     char *filename;
     char *fingerprint;
-    unsigned long function_initial_loc;
-    unsigned function_length;
+    uintptr_t function_initial_loc;
+    uintptr_t function_length;
 };
 
 #define OR_UNKNOWN(s) ((s) ? (s) : "UNKNOWN")
@@ -50,15 +50,15 @@ static char *backtrace_format(GList *backtrace)
         entry = backtrace->data;
 
         /* BUILD_ID+OFFSET SYMBOL MODNAME FINGERPRINT */
-        strbuf_append_strf(strbuf, "%s+0x%x %s %s 0x%lx[0x%x]\n",
+        strbuf_append_strf(strbuf, "%s+0x%x %s %s 0x%jx[0x%jx]\n",
                     OR_UNKNOWN(entry->build_id),
                     entry->build_id_offset,
                     OR_UNKNOWN(entry->symbol),
                     OR_UNKNOWN(entry->modname),
 
                     /* Debug only, fingerprint will come here: */
-                    entry->function_initial_loc,
-                    entry->function_length);
+                    (uintmax_t)entry->function_initial_loc,
+                    (uintmax_t)entry->function_length);
 
         backtrace = g_list_next(backtrace);
     }
@@ -66,7 +66,7 @@ static char *backtrace_format(GList *backtrace)
     return strbuf_free_nobuf(strbuf);
 }
 
-static void backtrace_add_build_id(GList *backtrace, unsigned long start, unsigned length,
+static void backtrace_add_build_id(GList *backtrace, uintmax_t start, uintmax_t length,
             const char *build_id, unsigned build_id_len, const char *modname, unsigned modname_len,
             const char *filename, unsigned filename_len)
 {
@@ -99,8 +99,8 @@ static void assign_build_ids(GList *backtrace, const char *dump_dir_name)
 
     const char *cur = unstrip_output;
 
-    unsigned long start;
-    unsigned length;
+    uintmax_t start;
+    uintmax_t length;
     const char *build_id;
     unsigned build_id_len;
     const char *modname;
@@ -116,7 +116,7 @@ static void assign_build_ids(GList *backtrace, const char *dump_dir_name)
         /* beginning of the line */
 
         /* START+SIZE */
-        ret = sscanf(cur, "0x%lx+0x%x %n", &start, &length, &chars_read);
+        ret = sscanf(cur, "0x%jx+0x%jx %n", &start, &length, &chars_read);
         if (ret < 2)
         {
             goto eat_line;
@@ -175,7 +175,7 @@ static GList *extract_addresses(const char *str)
 
     unsigned frame_number;
     unsigned next_frame = 0;
-    unsigned long address;
+    uintmax_t address;
 
     int ret;
     int chars_read;
@@ -208,7 +208,7 @@ static GList *extract_addresses(const char *str)
         }
 
         entry = xmalloc(sizeof(*entry));
-        entry->address = address;
+        entry->address = (uintptr_t)address;
         entry->symbol = (sym ? xstrndup(sym, cur-sym) : NULL);
         entry->build_id = entry->modname = entry->filename = NULL;
         entry->build_id_offset = 0;
@@ -317,7 +317,7 @@ static char *get_gdb_output(const char *dump_dir_name)
  * XXX Assumption: we'll always run on architecture the ELF is run on,
  * therefore we don't consider byte order.
  */
-static unsigned long fde_read_address(const uint8_t *p, unsigned len)
+static uintptr_t fde_read_address(const uint8_t *p, unsigned len)
 {
     int i;
     union {
@@ -332,7 +332,7 @@ static unsigned long fde_read_address(const uint8_t *p, unsigned len)
         u.b[i] = *p++;
     }
 
-    return (len == 4 ? (unsigned long)u.n4 : (unsigned long)u.n8);
+    return (len == 4 ? (uintptr_t)u.n4 : (uintptr_t)u.n8);
 }
 
 /* Given DWARF pointer encoding, return the length of the pointer in bytes.
@@ -378,7 +378,7 @@ static void elf_iterate_fdes(const char *filename, GList *entries)
     GElf_Shdr shdr;
     GElf_Phdr phdr;
     size_t shstrndx, phnum;
-    unsigned long exec_base = 1; /* Hopefully invalid offset. */
+    uintptr_t exec_base = 1; /* Hopefully invalid offset. */
 
     /* Initialize libelf, open the file and get its Elf handle. */
     if (elf_version(EV_CURRENT) == EV_NONE)
@@ -467,7 +467,7 @@ static void elf_iterate_fdes(const char *filename, GList *entries)
 
         if (phdr.p_type == PT_LOAD && phdr.p_flags & PF_X)
         {
-            exec_base = (unsigned long)phdr.p_vaddr;
+            exec_base = (uintptr_t)phdr.p_vaddr;
             break;
         }
     }
@@ -556,8 +556,8 @@ static void elf_iterate_fdes(const char *filename, GList *entries)
 
                     if (cie->ptr_len != 4 && cie->ptr_len != 8)
                     {
-                        VERB1 log("Unknown FDE encoding (CIE %lx) in %s",
-                                (unsigned long)cfi_offset, filename);
+                        VERB1 log("Unknown FDE encoding (CIE %jx) in %s",
+                                (uintmax_t)cfi_offset, filename);
                         skip_cie = 1;
                     }
                     if ((*augdata & 0x70) == DW_EH_PE_pcrel)
@@ -624,8 +624,8 @@ static void elf_iterate_fdes(const char *filename, GList *entries)
 
             if (it == NULL)
             {
-                VERB1 log("CIE not found for FDE %lx in %s",
-                        (unsigned long)cfi_offset, filename);
+                VERB1 log("CIE not found for FDE %jx in %s",
+                        (uintmax_t)cfi_offset, filename);
                 continue;
             }
 
@@ -633,19 +633,19 @@ static void elf_iterate_fdes(const char *filename, GList *entries)
              * compute the offset from VMA base
              */
 
-            unsigned long initial_location = fde_read_address(cfi.fde.start, cie->ptr_len);
-            unsigned long address_range = fde_read_address(cfi.fde.start+cie->ptr_len, cie->ptr_len);
+            uintptr_t initial_location = fde_read_address(cfi.fde.start, cie->ptr_len);
+            uintptr_t address_range = fde_read_address(cfi.fde.start+cie->ptr_len, cie->ptr_len);
 
             if (cie->pcrel)
             {
                 /* We need to determine how long is the 'length' (and
                  * consequently CIE id) field of this FDE -- it can be either 4
                  * or 12 bytes long. */
-                unsigned long length = fde_read_address(scn_data->d_buf + cfi_offset, 4);
-                uint64_t skip = (length == 0xffffffffUL ? 12 : 4);
+                uintptr_t length = fde_read_address(scn_data->d_buf + cfi_offset, 4);
+                uintptr_t skip = (length == 0xffffffffUL ? 12 : 4);
 
-                uint64_t mask = (cie->ptr_len == 4 ? 0xffffffffUL : 0xffffffffffffffffUL);
-                initial_location += (unsigned long)shdr.sh_offset + (uint64_t)cfi_offset + 2*skip;
+                uintptr_t mask = (cie->ptr_len == 4 ? 0xffffffffUL : 0xffffffffffffffffUL);
+                initial_location += (uintptr_t)shdr.sh_offset + (uintptr_t)cfi_offset + 2*skip;
                 initial_location &= mask;
             }
             else
