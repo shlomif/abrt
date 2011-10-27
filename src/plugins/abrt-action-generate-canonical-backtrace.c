@@ -23,6 +23,9 @@
 #include <elfutils/libdw.h>
 #include <dwarf.h>
 
+#include <bfd.h>
+#include <dis-asm.h>
+
 /* 60 seconds was too limiting on slow machines */
 static int exec_timeout_sec = 240;
 
@@ -50,7 +53,7 @@ static char *backtrace_format(GList *backtrace)
         entry = backtrace->data;
 
         /* BUILD_ID+OFFSET SYMBOL MODNAME FINGERPRINT */
-        strbuf_append_strf(strbuf, "%s+0x%x %s %s 0x%jx[0x%jx]\n",
+        strbuf_append_strf(strbuf, "%s+0x%x %s %s 0x%jx[0x%jx] %s\n",
                     OR_UNKNOWN(entry->build_id),
                     entry->build_id_offset,
                     OR_UNKNOWN(entry->symbol),
@@ -58,7 +61,8 @@ static char *backtrace_format(GList *backtrace)
 
                     /* Debug only, fingerprint will come here: */
                     (uintmax_t)entry->function_initial_loc,
-                    (uintmax_t)entry->function_length);
+                    (uintmax_t)entry->function_length,
+                    OR_UNKNOWN(entry->fingerprint));
 
         backtrace = g_list_next(backtrace);
     }
@@ -226,6 +230,7 @@ static GList *extract_addresses(const char *str)
         entry->address = (uintptr_t)address;
         entry->symbol = (sym ? xstrndup(sym, cur-sym) : NULL);
         entry->build_id = entry->modname = entry->filename = NULL;
+        entry->fingerprint = NULL;
         entry->build_id_offset = 0;
         entry->function_initial_loc = entry->function_length = 0;
         backtrace = g_list_append(backtrace, entry);
@@ -680,7 +685,8 @@ static void elf_iterate_fdes(const char *filename, GList *entries)
                 if (initial_location <= entry->build_id_offset
                         && entry->build_id_offset < initial_location + address_range)
                 {
-                    entry->function_initial_loc = initial_location;
+                    /* Convert to before-relocation absolute addresses, disassembler uses those. */
+                    entry->function_initial_loc = exec_base + initial_location;
                     entry->function_length = address_range;
                     /*TODO: remove the entry from the list to save a bit of time in next iteration?*/
                 }
@@ -696,20 +702,147 @@ ret_close:
     close(fd);
 }
 
+static char* fingerprint_insns(GList *insns)
+{
+    return xasprintf("number_of_instructions:%d", g_list_length(insns));
+}
+
+/* Capture disassembler output into a strbuf.
+ * XXX: This may be slow due to lots of reallocations, so if it's a problem,
+ * we can replace strbuf with a fixed-size buffer.
+ */
+static int buffer_printf(void *buffer, const char *fmt, ...)
+{
+    struct strbuf *strbuf = buffer;
+    va_list p;
+    int printed;
+    char *s;
+
+    va_start(p, fmt);
+    s = xvasprintf(fmt, p);
+    va_end(p);
+
+    strbuf_append_str(strbuf, s);
+    printed = strlen(s);
+
+    free(s);
+    return printed;
+}
+
+#define log_bfd_error(function) log("%s failed for %s: %s", function, filename, bfd_errmsg(bfd_get_error()))
+
+/* Open filename, initialize binutils/libopcodes disassembler, disassemble each
+ * function in 'entries' given by the ranges computed earlier and compute
+ * fingerprint based on the disassembly.
+ */
+static void disassemble_file(const char *filename, GList *entries)
+{
+    bfd *bfdFile;
+    asection *section;
+    disassembler_ftype disassemble;
+    struct disassemble_info info;
+    uintptr_t count, pc;
+    GList *it, *insns;
+    struct backtrace_entry *entry;
+
+    static int initialized = 0;
+    if (!initialized)
+    {
+        bfd_init();
+        initialized = 1;
+    }
+
+    bfdFile = bfd_openr(filename, NULL);
+    if (bfdFile == NULL)
+    {
+        VERB1 log_bfd_error("bfd_openr");
+        return;
+    }
+
+    if (!bfd_check_format(bfdFile, bfd_object))
+    {
+        VERB1 log_bfd_error("bfd_check_format");
+        goto ret_close;
+    }
+
+    section = bfd_get_section_by_name(bfdFile, ".text");
+    if (section == NULL)
+    {
+        VERB1 log_bfd_error("bfd_get_section_by_name");
+        goto ret_close;
+    }
+
+    disassemble = disassembler(bfdFile);
+    if (disassemble == NULL)
+    {
+        VERB1 log("Unable to find disassembler");
+        goto ret_close;
+    }
+
+    init_disassemble_info(&info, NULL, (fprintf_ftype)buffer_printf);
+    info.arch = bfd_get_arch(bfdFile);
+    info.mach = bfd_get_mach(bfdFile);
+    info.buffer_vma = section->vma;
+    info.buffer_length = section->size;
+    info.section = section;
+    /*TODO: memory error func*/
+    bfd_malloc_and_get_section(bfdFile, section, &info.buffer);
+    disassemble_init_for_target(&info);
+
+    /* Iterate over backtrace entries, disassembly and fingerprint each one. */
+    for (it = entries; it != NULL; it = g_list_next(it))
+    {
+        entry = it->data;
+        uintptr_t function_begin = entry->function_initial_loc;
+        uintptr_t function_end = function_begin + entry->function_length;
+
+        /* Check whether the address range is sane. */
+        if (!(section->vma <= function_begin
+             && function_end <= section->vma + section->size
+             && function_begin < function_end))
+        {
+            VERB2 log("Function range 0x%jx-0x%jx probably wrong", (uintmax_t)function_begin,
+                    (uintmax_t)function_end);
+            continue;
+        }
+
+        /* Iterate over each instruction and add its string representation to a list. */
+        insns = NULL;
+        pc = count = function_begin;
+        while (count > 0 && pc < function_end)
+        {
+            info.stream = strbuf_new();
+            count = disassemble(pc, &info);
+            pc += count;
+            insns = g_list_append(insns, strbuf_free_nobuf(info.stream));
+        }
+
+        /* Compute the actual fingerprint from the list. */
+        /* TODO: Check for failures. */
+        entry->fingerprint = fingerprint_insns(insns);
+
+        list_free_with_free(insns);
+    }
+
+ret_close:
+    bfd_close(bfdFile);
+}
+
 static gint filename_cmp(const struct backtrace_entry *entry, const char *filename)
 {
     return (entry->filename ? strcmp(filename, entry->filename) : 1);
 }
 
-static void extract_function_ranges(GList *backtrace)
+static void disassemble_and_fingerprint(GList *backtrace)
 {
     GList *to_be_done = g_list_copy(backtrace);
     GList *worklist, *it;
     const char *filename;
     struct backtrace_entry *entry;
 
-    /* Process each element */
-    /* We call elf_iterate_fdes on sublists of backtrace such that they are from the same file. */
+    /* Process each element
+     * We need to divide the backtrace to smaller lists such that each list has
+     * entries associated to the same file name. */
     while (to_be_done != NULL)
     {
         /* Take first entry */
@@ -744,7 +877,11 @@ static void extract_function_ranges(GList *backtrace)
         }
 
         /* Process the worklist */
+        VERB2 log("Extracting function ranges from %s", filename);
         elf_iterate_fdes(filename, worklist);
+
+        VERB2 log("Disassembling functions from %s", filename);
+        disassemble_file(filename, worklist);
     }
 }
 
@@ -790,8 +927,8 @@ int main(int argc, char **argv)
     assign_build_ids(backtrace, dump_dir_name);
 
     /* Extract address ranges from all the executables in the backtrace*/
-    VERB1 log("Extracting function ranges from ELF executables");
-    extract_function_ranges(backtrace);
+    VERB1 log("Computing function fingerprints");
+    disassemble_and_fingerprint(backtrace);
 
     struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ 0);
     if (!dd)

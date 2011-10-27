@@ -187,6 +187,9 @@ abrt_action_generate_canonical_backtrace_LDADD = \
     $(LIBREPORT_LIBS) \
     -lelf \
     -ldw \
+    -ldl \
+    -lbfd \
+    -lopcodes \
     ../lib/libabrt.la
 
 abrt_action_analyze_backtrace_SOURCES = \

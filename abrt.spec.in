@@ -43,6 +43,7 @@ BuildRequires: libreport-devel
 BuildRequires: btparser-devel
 BuildRequires: elfutils-devel
 BuildRequires: elfutils-libelf-devel
+BuildRequires: binutils-devel
 
 %if %{with systemd}
 Requires: systemd-units
