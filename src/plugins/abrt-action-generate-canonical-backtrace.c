@@ -97,6 +97,13 @@ static void assign_build_ids(GList *backtrace, const char *dump_dir_name)
     if (unstrip_output == NULL)
         error_msg_and_die("Running eu-unstrip failed");
 
+    /* Get the executable name -- unstrip doesn't know it. */
+    struct dump_dir *dd = dd_opendir(dump_dir_name, DD_OPEN_READONLY);
+    if (!dd)
+        xfunc_die(); /* dd_opendir already printed error msg */
+    char *executable = dd_load_text(dd, FILENAME_EXECUTABLE);
+    dd_close(dd);
+
     const char *cur = unstrip_output;
 
     uintmax_t start;
@@ -150,6 +157,13 @@ static void assign_build_ids(GList *backtrace, const char *dump_dir_name)
         cur = skip_non_whitespace(cur);
         modname_len = cur-modname;
 
+        /* Use real executable file name instead of "-". */
+        if (modname_len == 5 && strncmp(modname, "[exe]", 5) == 0)
+        {
+            filename = executable;
+            filename_len = strlen(executable);
+        }
+
         backtrace_add_build_id(backtrace, start, length,
                     build_id, build_id_len, modname, modname_len,
                     filename, filename_len);
@@ -165,6 +179,7 @@ eat_line:
         }
     }
 
+    free(executable);
     free(unstrip_output);
 }
 
@@ -686,13 +701,12 @@ static gint filename_cmp(const struct backtrace_entry *entry, const char *filena
     return (entry->filename ? strcmp(filename, entry->filename) : 1);
 }
 
-static void extract_function_ranges(GList *backtrace, const char *executable)
+static void extract_function_ranges(GList *backtrace)
 {
     GList *to_be_done = g_list_copy(backtrace);
     GList *worklist, *it;
     const char *filename;
     struct backtrace_entry *entry;
-    int is_executable;
 
     /* Process each element */
     /* We call elf_iterate_fdes on sublists of backtrace such that they are from the same file. */
@@ -701,12 +715,10 @@ static void extract_function_ranges(GList *backtrace, const char *executable)
         /* Take first entry */
         entry = to_be_done->data;
         filename = entry->filename;
-        is_executable = ((entry->modname != NULL && strcmp(entry->modname, "[exe]") == 0) ? 1 : 0);
         worklist = NULL;
 
-        /* Skip useless filenames, but keep entries with filename "-" and modname "[exe]" */
-        if (filename == NULL
-            || (strcmp(filename, "-") == 0 && !is_executable))
+        /* Skip entries without file names */
+        if (filename == NULL || strcmp(filename, "-") == 0)
         {
             to_be_done = g_list_remove(to_be_done, entry);
             continue;
@@ -729,11 +741,6 @@ static void extract_function_ranges(GList *backtrace, const char *executable)
         {
             VERB1 log("extract_function_ranges internal error");
             return;
-        }
-
-        if (is_executable)
-        {
-            filename = executable;
         }
 
         /* Process the worklist */
@@ -782,15 +789,13 @@ int main(int argc, char **argv)
     VERB1 log("Running eu-unstrip -n to obtain build ids");
     assign_build_ids(backtrace, dump_dir_name);
 
+    /* Extract address ranges from all the executables in the backtrace*/
+    VERB1 log("Extracting function ranges from ELF executables");
+    extract_function_ranges(backtrace);
+
     struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ 0);
     if (!dd)
         return 1;
-
-    char *executable = dd_load_text(dd, FILENAME_EXECUTABLE);
-
-    /* Extract address ranges from all the executables in the backtrace*/
-    VERB1 log("Extracting function ranges from ELF executables");
-    extract_function_ranges(backtrace, executable);
 
     char *formated_backtrace = backtrace_format(backtrace);
     dd_save_text(dd, FILENAME_CANONICAL_BACKTRACE, formated_backtrace);
