@@ -18,6 +18,7 @@
 */
 #include "abrtlib.h"
 
+#ifdef ENABLE_DISASSEMBLY
 #include <libelf.h>
 #include <gelf.h>
 #include <elfutils/libdw.h>
@@ -25,6 +26,7 @@
 
 #include <bfd.h>
 #include <dis-asm.h>
+#endif /* ENABLE_DISASSEMBLY */
 
 /* 60 seconds was too limiting on slow machines */
 static int exec_timeout_sec = 240;
@@ -332,6 +334,7 @@ static char *get_gdb_output(const char *dump_dir_name)
     return bt;
 }
 
+#ifdef ENABLE_DISASSEMBLY
 /* Read len bytes and interpret them as a number. Pointer p does not have to be
  * aligned.
  * XXX Assumption: we'll always run on architecture the ELF is run on,
@@ -884,6 +887,7 @@ static void disassemble_and_fingerprint(GList *backtrace)
         disassemble_file(filename, worklist);
     }
 }
+#endif /* ENABLE_DISASSEMBLY */
 
 int main(int argc, char **argv)
 {
@@ -926,9 +930,11 @@ int main(int argc, char **argv)
     VERB1 log("Running eu-unstrip -n to obtain build ids");
     assign_build_ids(backtrace, dump_dir_name);
 
+#ifdef ENABLE_DISASSEMBLY
     /* Extract address ranges from all the executables in the backtrace*/
     VERB1 log("Computing function fingerprints");
     disassemble_and_fingerprint(backtrace);
+#endif /* ENABLE_DISASSEMBLY */
 
     struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ 0);
     if (!dd)

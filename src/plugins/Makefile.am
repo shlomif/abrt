@@ -185,12 +185,17 @@ abrt_action_generate_canonical_backtrace_CPPFLAGS = \
     -Wall -Wwrite-strings -Werror
 abrt_action_generate_canonical_backtrace_LDADD = \
     $(LIBREPORT_LIBS) \
+    ../lib/libabrt.la
+
+if ENABLE_DISASSEMBLY
+abrt_action_generate_canonical_backtrace_CPPFLAGS += -DENABLE_DISASSEMBLY
+abrt_action_generate_canonical_backtrace_LDADD += \
     -lelf \
     -ldw \
     -ldl \
     -lbfd \
-    -lopcodes \
-    ../lib/libabrt.la
+    -lopcodes
+endif
 
 abrt_action_analyze_backtrace_SOURCES = \
     abrt-action-analyze-backtrace.c
