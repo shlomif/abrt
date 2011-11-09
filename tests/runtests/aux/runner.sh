@@ -2,12 +2,19 @@
 
 pushd $(dirname $0)
 
-. abrt-testing-defs.sh
+. config.sh
+if [ -f .config.local.sh ]; then
+    . config.local.sh
+fi
+
+TESTNAME="$(grep 'TEST=\".*\"' $1 | awk -F '=' '{ print $2 }' | sed 's/"//g')"
+echo $TESTNAME
+exit 0
 
 if [ $1 ]; then
     TESTNAME="$(grep 'TEST=\".*\"' $1 | awk -F '=' '{ print $2 }' | sed 's/"//g')"
 
-    OUTPUTFILE="$ABRT_TESTOUT_ROOT/TESTOUT-${TESTNAME}.log"
+    OUTPUTFILE="$OUTPUT_ROOT/TESTOUT-${TESTNAME}.log"
     mkdir -p $(dirname $OUTPUTFILE)
 
     if ! cat /proc/sys/kernel/core_pattern | grep -q abrt; then
@@ -53,6 +60,7 @@ if [ $1 ]; then
     exit 0
 else
     popd
-    echo_err "Provide test name"
+    echo "Provide test name"
+    exit 1
 fi
 
