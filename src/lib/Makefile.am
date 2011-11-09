@@ -11,6 +11,7 @@ lib_LTLIBRARIES = \
 libabrt_la_SOURCES = \
     abrt_conf.c abrt_conf.h \
     hooklib.c hooklib.h \
+    canonical_backtrace.c canonical_backtrace.h \
     daemon_is_ok.c
 
 libabrt_la_CPPFLAGS = \
@@ -22,9 +23,11 @@ libabrt_la_CPPFLAGS = \
     -DCONF_DIR=\"$(CONF_DIR)\" \
     -DEVENTS_DIR=\"$(EVENTS_DIR)\" \
     $(GLIB_CFLAGS) \
+    $(BTPARSER_CFLAGS) \
     $(LIBREPORT_CFLAGS) \
     -D_GNU_SOURCE
 libabrt_la_LDFLAGS = \
     -version-info 0:1:0
 libabrt_la_LIBADD = \
-    $(GLIB_LIBS)
+    $(GLIB_LIBS) \
+    $(BTPARSER_LIBS)

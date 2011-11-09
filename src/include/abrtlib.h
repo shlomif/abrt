@@ -38,6 +38,7 @@ int vdprintf(int d, const char *format, va_list ap);
 
 #include "hooklib.h"
 #include "abrt_conf.h"
+#include "canonical_backtrace.h"
 
 
 #ifdef __cplusplus
