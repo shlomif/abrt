@@ -43,7 +43,7 @@ struct backtrace_entry {
     uintptr_t function_length;
 };
 
-#define OR_UNKNOWN(s) ((s) ? (s) : "UNKNOWN")
+#define OR_UNKNOWN(s) ((s) ? (s) : "-")
 
 static char *backtrace_format(GList *backtrace)
 {
@@ -54,16 +54,12 @@ static char *backtrace_format(GList *backtrace)
     {
         entry = backtrace->data;
 
-        /* BUILD_ID+OFFSET SYMBOL MODNAME FINGERPRINT */
-        strbuf_append_strf(strbuf, "%s+0x%x %s %s 0x%jx[0x%jx] %s\n",
+        /* BUILD_ID OFFSET SYMBOL MODNAME FINGERPRINT */
+        strbuf_append_strf(strbuf, "%s 0x%x %s %s %s\n",
                     OR_UNKNOWN(entry->build_id),
                     entry->build_id_offset,
                     OR_UNKNOWN(entry->symbol),
                     OR_UNKNOWN(entry->modname),
-
-                    /* Debug only, fingerprint will come here: */
-                    (uintmax_t)entry->function_initial_loc,
-                    (uintmax_t)entry->function_length,
                     OR_UNKNOWN(entry->fingerprint));
 
         backtrace = g_list_next(backtrace);
@@ -221,7 +217,12 @@ static GList *extract_addresses(const char *str)
         {
             sym = cur;
             cur = skip_non_whitespace(cur);
-            /* XXX: we might terminate the cycle here if sym is __libc_start_main */
+
+            /* Ignore anything below __libc_start_main. */
+            if (strncmp("__libc_start_main", sym, 17) == 0)
+            {
+                break;
+            }
         }
         else
         {
