@@ -40,7 +40,7 @@ function run_stage() {
     end=$( grep -n "MARK: End.*: ${1}" '/var/log/messages'  | tail -n 1 | awk -F: '{print $1}' )
     start=$[ $start + 1 ]
     end=$[ $end - 2 ]
-    sed -n "${start},${end}p;${end}q" '/var/log/messages' "$dir/messages"
+    sed -n "${start},${end}p;${end}q" '/var/log/messages' > "$dir/messages"
 }
 
 # colorful OK/FAIL formatting
