@@ -54,8 +54,8 @@ if [ $1 ]; then
     if [ -x /usr/sbin/abrt-install-ccpp-hook ]; then
         abrt-install-ccpp-hook uninstall
     fi
-    test pidof abrtd && killall abrtd
-    test pidof abrt-dump-oops && killall abrt-dump-oops
+    pidof abrtd && killall abrtd
+    pidof abrt-dump-oops && killall abrt-dump-oops
 
     exit 0
 else
