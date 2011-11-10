@@ -7,30 +7,40 @@ function syslog() {
 
 function run_stage() {
     local msg="Running stage: ${1}"
+    local endmsg="End of stage: ${1}"
     local dirname=$( echo ${1} | tr "[:upper:]" "[:lower:]" )
     local varname="${1}_SCRIPT"
     local script="${!varname}"
+    local dir="$OUTPUT_ROOT/$dirname"
 
     syslog "$msg"
-    mkdir -p $OUTPUT_ROOT/$dirname
+    mkdir -p "$dir"
     if [ ${1} = "TEST" ]; then
         echo_success
         echo " $msg"
-        $script | tee $OUTPUT_ROOT/$dirname/stage.log
+        $script | tee "$dir/stage.log"
         if [ $? != 0 ]; then
-            touch $OUTPUT_ROOT/$dirname/failed
+            touch "$dir/failed"
         fi
-        sed -r -i "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" $OUTPUT_ROOT/$dirname/stage.log
+        sed -r -i "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" "$dir/stage.log"
     else
-        $script &> $OUTPUT_ROOT/$dirname/stage.log
+        $script &> "$dir/stage.log"
         if [ $? != 0 ]; then
             echo_failure
-            touch $OUTPUT_ROOT/$dirname/failed
+            touch "$dir/failed"
         else
             echo_success
         fi
         echo " $msg"
     fi
+    syslog "$endmsg"
+
+    # collect /var/log/messages for the stage
+    start=$( grep -n "MARK: .*: ${1}" '/var/log/messages'  | tail -n 1 )
+    end=$( grep -n "MARK: End.*: ${1}" '/var/log/messages'  | tail -n 1 )
+    start=$[ $start + 1 ]
+    end=$[ $end - 2 ]
+    sed -n "${start},${end}p;${end}q" '/var/log/messages' "$dir/messages"
 }
 
 # colorful OK/FAIL formatting
