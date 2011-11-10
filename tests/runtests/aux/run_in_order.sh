@@ -1,8 +1,8 @@
 #!/bin/bash
 
 testlist=$(cat $TEST_LIST | grep '^[^#]\+$')
+crit_test_fail=0
 
-CTESTFAIL=0
 for test_dir in $testlist; do
     test="$test_dir/runtest.sh"
     testname="$(grep 'TEST=\".*\"' $test | awk -F '=' '{ print $2 }' | sed 's/"//g')"
@@ -23,6 +23,7 @@ for test_dir in $testlist; do
 
     # console reporting
     if [ "$test_result" == "FAIL" ]; then
+        touch "$OUTPUT_ROOT/test/$testname/failed"
         echo_failure
     else
         echo_success
@@ -36,14 +37,14 @@ for test_dir in $testlist; do
                 echo -n " | Critical test failed"
                 if [ "$TEST_CONTINUE" = "0" ]; then
                     echo ", stopping further testing"
-                    CTESTFAIL=1
+                    crit_test_fail=1
                     break
                 else
                     echo ", TEST_CONTINUE in effect, resuming testing"
                 fi
             fi
         done
-        if [ $CTESTFAIL -eq 1 ]; then
+        if [ $crit_test_fail -eq 1 ]; then
             break
         fi
     fi
@@ -56,7 +57,7 @@ else
     RESULT="PASS"
 fi
 
-if [ $CTESTFAIL -eq 1 ]; then
+if [ $crit_test_fail -eq 1 ]; then
     RESULT="FAIL"
 fi
 
