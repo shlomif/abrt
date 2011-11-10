@@ -12,7 +12,7 @@ for test_dir in $testlist; do
 
     syslog $short_testname
     mkdir -p $outdir
-    $RUNNER_SCRIPT $test > $logfile
+    $RUNNER_SCRIPT $test &> $logfile
 
     # extract test protocol
     start_line=$(grep -n -i 'Test protocol' $logfile | awk -F: '{print $1}')
