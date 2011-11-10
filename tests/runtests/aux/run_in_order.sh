@@ -15,13 +15,13 @@ for test_dir in $testlist; do
 
     # check test result
     test_result="FAIL"
-    if [ -e $OUTPUT_ROOT/TESTOUT-${testname}.log ]; then
-        if ! grep -q FAIL $OUTPUT_ROOT/TESTOUT-${testname}.log; then
+    if [ -e $logfile ]; then
+        if ! grep -q FAIL $logfile; then
             test_result="PASS"
         fi
     fi
 
-    # text reporting
+    # console reporting
     if [ "$test_result" == "FAIL" ]; then
         echo_failure
     else
