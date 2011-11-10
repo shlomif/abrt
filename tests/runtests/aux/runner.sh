@@ -1,27 +1,17 @@
 #!/bin/bash
 
-pushd $(dirname $0)
-
-. config.sh
-if [ -f .config.local.sh ]; then
-    . config.local.sh
-fi
-
-TESTNAME="$(grep 'TEST=\".*\"' $1 | awk -F '=' '{ print $2 }' | sed 's/"//g')"
-echo $TESTNAME
-exit 0
-
 if [ $1 ]; then
-    TESTNAME="$(grep 'TEST=\".*\"' $1 | awk -F '=' '{ print $2 }' | sed 's/"//g')"
-
-    OUTPUTFILE="$OUTPUT_ROOT/TESTOUT-${TESTNAME}.log"
-    mkdir -p $(dirname $OUTPUTFILE)
-
+    # core pattern
     if ! cat /proc/sys/kernel/core_pattern | grep -q abrt; then
         if [ -x /usr/sbin/abrt-install-ccpp-hook ]; then
             /usr/sbin/abrt-install-ccpp-hook install
+            echo "core_pattern: $(cat /proc/sys/kernel/core_pattern)"
+        else
+            echo "core_pattern: abrt-install-ccpp-hook not present, skipping"
         fi
     fi
+
+    # abrtd
     if ! pidof abrtd 2>&1 > /dev/null; then
         if [ -x /usr/sbin/abrtd ]; then
             if [ -x /bin/systemctl ]; then
@@ -30,36 +20,44 @@ if [ $1 ]; then
                 /usr/sbin/service dbus restart
             fi
             /usr/sbin/abrtd -s
+            echo "abrtd PID: $(pidof abrtd)"
+        else
+            echo "abrtd: not present, skipping"
         fi
     fi
+
+    # abrt-dump-oops
     if ! pidof abrt-dump-oops 2>&1 > /dev/null; then
         if [ -x /usr/bin/abrt-dump-oops ]; then
             /usr/bin/abrt-dump-oops -d /var/spool/abrt -rwx /var/log/messages &
+            echo "abrt-dump-oops PID: $(pidof abrt-dump-oops)"
+        else
+            echo "abrt-dump-oops: not present, skipping"
         fi
     fi
 
-    echo "core_pattern: $(cat /proc/sys/kernel/core_pattern)"
-    echo "abrtd PID: $(pidof abrtd)"
-    echo "abrt-dump-oops PID: $(pidof abrt-dump-oops)"
-    echo "sleeping for 30 seconds before running the test"
-    echo "(to avoid crashes not being dumped due to time limits)"
+    if [ "${DELAY+set}" = "set" ]; then
+        echo "sleeping for $DELAY seconds before running the test"
+        echo "(to avoid crashes not being dumped due to time limits)"
+        for i in {0..$DELAY}; do echo -n '.'; sleep 1; done; echo '' # progress bar
+    fi
 
-    for i in {0..30}; do echo -n '.'; sleep 1; done; echo '' # progress bar
-
+    # run test
     pushd $(dirname $1)
-    ./$(basename $1) 2>&1 | tee $OUTPUTFILE
+    if [ "${LOGFILE+set}" = "set" ]; then
+        ./$(basename $1) 2>&1 | tee $LOGFILE
+    else
+        ./$(basename $1)
+    fi
     popd
 
+    # cleanup
     abrt-install-ccpp-hook uninstall
     killall abrtd
     killall abrt-dump-oops
-    rm -rf /var/run/abrt
-
-    popd
 
     exit 0
 else
-    popd
     echo "Provide test name"
     exit 1
 fi

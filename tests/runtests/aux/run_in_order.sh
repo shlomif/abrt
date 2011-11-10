@@ -10,7 +10,8 @@ for test_dir in $testlist; do
 
     syslog $short_testname
     mkdir -p "$OUTPUT_ROOT/test/$testname"
-    #echo $RUNNER_SCRIPT $test
+    logfile="$OUTPUT_ROOT/test/$testname/full.log"
+    TESTNAME=$testname LOGFILE=$logfile $RUNNER_SCRIPT $test > $logfile
 
     # check test result
     test_result="FAIL"

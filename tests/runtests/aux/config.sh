@@ -19,6 +19,8 @@ export POST_SCRIPT='aux/post.sh'
 export TEST_CRITICAL='abrt-nightly-build'
 # continue testing even if critical test fails
 export TEST_CONTINUE=1
+# wait $DELAY seconds before running next script
+export DELAY=30
 
 # - mailx script config -
 export MAILTO='rmarko@redhat.com'
