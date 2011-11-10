@@ -20,6 +20,7 @@ for test_dir in $testlist; do
     start_line=$[ $start_line - 1 ]
     end_line=$[ $end_line - 1 ]
 
+    echo 'run-in-order'
     sed -n "${start_line},${end_line}p;${end_line}q" $logfile \
         > "$outdir/protocol.log"
 
