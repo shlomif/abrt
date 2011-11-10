@@ -36,9 +36,9 @@ function run_stage() {
     syslog "$endmsg"
 
     # collect /var/log/messages for the stage
-    start=$( grep -n "MARK: .*: ${1}" '/var/log/messages'  | tail -n 1 | awk -F: '{print $1}' )
+    start=$( grep -n "MARK: Running.*: ${1}" '/var/log/messages'  | tail -n 1 | awk -F: '{print $1}' )
     end=$( grep -n "MARK: End.*: ${1}" '/var/log/messages'  | tail -n 1 | awk -F: '{print $1}' )
-    start=$[ $start + 1 ]
+    start=$[ $start + 2 ]
     end=$[ $end - 2 ]
     sed -n "${start},${end}p;${end}q" '/var/log/messages' > "$dir/messages"
 }
