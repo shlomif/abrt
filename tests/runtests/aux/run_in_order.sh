@@ -18,7 +18,7 @@ for test_dir in $testlist; do
     start_line=$(grep -n -i 'Test protocol' $logfile | awk -F: '{print $1}')
     end_line=$(grep -n -i 'TEST END MARK' $logfile | awk -F: '{print $1}')
     start_line=$[ $start_line - 1 ]
-    end_line=$[ $start_line - 1 ]
+    end_line=$[ $end_line - 1 ]
 
     sed -n "${start_line},${end_line}p;${end_line}q" $logfile \
         > "$outdir/protocol.log"
