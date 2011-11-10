@@ -21,8 +21,10 @@ for test_dir in $testlist; do
     end_line=$[ $end_line - 1 ]
 
     echo 'run-in-order'
+    echo "${start_line},${end_line}p;${end_line}q"
     sed -n "${start_line},${end_line}p;${end_line}q" $logfile \
         > "$outdir/protocol.log"
+    echo '/run-in-order'
 
     # append protocol to results
     echo '' >> $OUTPUT_ROOT/results
