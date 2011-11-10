@@ -7,11 +7,22 @@ for test_dir in $testlist; do
     test="$test_dir/runtest.sh"
     testname="$(grep 'TEST=\".*\"' $test | awk -F '=' '{ print $2 }' | sed 's/"//g')"
     short_testname=${testname:0:55}
+    outdir="$OUTPUT_ROOT/test/$testname"
+    logfile="$outdir/full.log"
 
     syslog $short_testname
-    mkdir -p "$OUTPUT_ROOT/test/$testname"
-    logfile="$OUTPUT_ROOT/test/$testname/full.log"
-    TESTNAME=$testname LOGFILE=$logfile $RUNNER_SCRIPT $test > $logfile
+    mkdir -p $outdir
+    $RUNNER_SCRIPT $test > $logfile
+
+    # extract test protocol
+    start_line=$(grep -n -i 'Test protocol' $logfile | awk -F: '{print $1}')
+    end_line=$(grep -n -i 'TEST END MARK' $logfile | awk -F: '{print $1}')
+    sed -n "${start_line},${end_line}p;${end_line}q" $logfile \
+        > "$outdir/protocol.log"
+
+    # append protocol to results
+    echo '' >> $OUTPUT_ROOT/results
+    cat "$outdir/protocol.log" >> $OUTPUT_ROOT/results
 
     # check test result
     test_result="FAIL"
@@ -23,7 +34,7 @@ for test_dir in $testlist; do
 
     # console reporting
     if [ "$test_result" == "FAIL" ]; then
-        touch "$OUTPUT_ROOT/test/$testname/failed"
+        touch "$outdir/failed"
         echo_failure
     else
         echo_success

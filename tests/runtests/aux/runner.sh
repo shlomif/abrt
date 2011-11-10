@@ -45,11 +45,9 @@ if [ $1 ]; then
 
     # run test
     pushd $(dirname $1)
-    if [ "${LOGFILE+set}" = "set" ]; then
-        ./$(basename $1) 2>&1 | tee -a $LOGFILE
-    else
-        ./$(basename $1)
-    fi
+    echo ":: TEST START MARK ::"
+    ./$(basename $1)
+    echo ":: TEST END MARK ::"
     popd
 
     # cleanup
