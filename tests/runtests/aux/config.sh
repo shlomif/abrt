@@ -18,7 +18,7 @@ export POST_SCRIPT='aux/post.sh'
 # may be supressed with TEST_CONTINUE
 export TEST_CRITICAL='abrt-nightly-build'
 # continue testing even if critical test fails
-export TEST_CONTINUE=1
+export TEST_CONTINUE=0
 # wait $DELAY seconds before running next script
 export DELAY=30
 
