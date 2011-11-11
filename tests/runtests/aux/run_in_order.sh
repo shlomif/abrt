@@ -14,6 +14,7 @@ for test_dir in $testlist; do
 
     syslog $short_testname
     $RUNNER_SCRIPT $test &> $logfile
+    syslog "End: $short_testname"
 
     # save post crashes
     n_post=$( find /var/spool/abrt/* -type d | wc -l )
@@ -35,6 +36,14 @@ for test_dir in $testlist; do
 
     sed -n "${start_line},${end_line}p;${end_line}q" $logfile \
         > "$outdir/protocol.log"
+
+    # collect /var/log/messages
+    start=$( grep -n "MARK: $short_testname.*" '/var/log/messages'  | tail -n 1 | awk -F: '{print $1}' )
+    end=$( grep -n "MARK: End: $short_testname.*" '/var/log/messages'  | tail -n 1 | awk -F: '{print $1}' )
+    start=$[ $start + 2 ]
+    end=$[ $end - 2 ]
+
+    sed -n "${start},${end}p;${end}q" '/var/log/messages' > "$outdir/messages"
 
     # append protocol to results
     echo '' >> $OUTPUT_ROOT/results
