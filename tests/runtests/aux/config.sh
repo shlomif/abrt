@@ -2,7 +2,7 @@
 
 # - global config -
 # logs destination
-export OUTPUT_ROOT='/tmp/abrt-TESTOUT'
+export OUTPUT_ROOT='/tmp/abrt-testsuite'
 
 export TEST_LIST='aux/test_order'
 
