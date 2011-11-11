@@ -22,7 +22,6 @@ function run_stage() {
         if [ $? != 0 ]; then
             touch "$dir/failed"
         fi
-        echo 'no colors'
         sed -r -i "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" "$dir/stage.log"
     else
         $script &> "$dir/stage.log"
@@ -42,7 +41,6 @@ function run_stage() {
     start=$[ $start + 2 ]
     end=$[ $end - 2 ]
 
-    echo 'stage'
     sed -n "${start},${end}p;${end}q" '/var/log/messages' > "$dir/messages"
 }
 

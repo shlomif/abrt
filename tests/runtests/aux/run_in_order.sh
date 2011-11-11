@@ -17,14 +17,13 @@ for test_dir in $testlist; do
     # extract test protocol
     start_line=$(grep -n -i 'Test protocol' $logfile | awk -F: '{print $1}')
     end_line=$(grep -n -i 'TEST END MARK' $logfile | awk -F: '{print $1}')
-    start_line=$[ $start_line - 1 ]
+    if [ $start_line -gt 0 ]; then
+        start_line=$[ $start_line - 1 ]
+    fi
     end_line=$[ $end_line - 1 ]
 
-    echo 'run-in-order'
-    echo "${start_line},${end_line}p;${end_line}q"
     sed -n "${start_line},${end_line}p;${end_line}q" $logfile \
         > "$outdir/protocol.log"
-    echo '/run-in-order'
 
     # append protocol to results
     echo '' >> $OUTPUT_ROOT/results
