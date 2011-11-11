@@ -10,14 +10,34 @@ for test_dir in $testlist; do
     outdir="$OUTPUT_ROOT/test/$testname"
     logfile="$outdir/full.log"
 
-    syslog $short_testname
     mkdir -p $outdir
+
+    # save pre crashes
+    n_prior=$( find /var/spool/abrt/* -type d | wc -l )
+    if [ $n_prior -gt 0 ]; then
+        mkdir "$outdir/pre_crashes"
+        for dir in $( find /var/spool/abrt/* -type d ); do
+            mv "$dir" "$outdir/pre_crashes/"
+        done
+    fi
+
+    syslog $short_testname
     $RUNNER_SCRIPT $test &> $logfile
+
+    # save post crashes
+    n_prior=$( find /var/spool/abrt/* -type d | wc -l )
+    if [ $n_prior -gt 0 ]; then
+        mkdir "$outdir/post_crashes"
+        for dir in $( find /var/spool/abrt/* -type d ); do
+            mv "$dir" "$outdir/post_crashes/"
+        done
+    fi
 
     # extract test protocol
     start_line=$(grep -n -i 'Test protocol' $logfile | awk -F: '{print $1}')
     end_line=$(grep -n -i 'TEST END MARK' $logfile | awk -F: '{print $1}')
-    echo "|$start_line|"
+
+    #echo "|$start_line|"
     if [ $start_line -gt 0 ]; then
         start_line=$[ $start_line - 1 ]
     fi
