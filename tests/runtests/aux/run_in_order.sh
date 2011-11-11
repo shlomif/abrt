@@ -17,6 +17,7 @@ for test_dir in $testlist; do
     # extract test protocol
     start_line=$(grep -n -i 'Test protocol' $logfile | awk -F: '{print $1}')
     end_line=$(grep -n -i 'TEST END MARK' $logfile | awk -F: '{print $1}')
+    echo "|$start_line|"
     if [ $start_line -gt 0 ]; then
         start_line=$[ $start_line - 1 ]
     fi
