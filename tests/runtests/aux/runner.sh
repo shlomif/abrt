@@ -41,7 +41,7 @@ if [ $1 ]; then
     if [ "${DELAY+set}" = "set" ]; then
         echo "sleeping for $DELAY seconds before running the test"
         echo "(to avoid crashes not being dumped due to time limits)"
-        for i in {0..$DELAY}; do echo -n '.'; sleep 1; done; echo '' # progress bar
+        sleep $DELAY
     fi
 
     # run test
