@@ -37,6 +37,7 @@ if [ $1 ]; then
     fi
 
     # test delay
+    echo "|$DELAY|"
     if [ "${DELAY+set}" = "set" ]; then
         echo "sleeping for $DELAY seconds before running the test"
         echo "(to avoid crashes not being dumped due to time limits)"
