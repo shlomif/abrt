@@ -42,6 +42,9 @@ function run_stage() {
     end=$[ $end - 2 ]
 
     sed -n "${start},${end}p;${end}q" '/var/log/messages' > "$dir/messages"
+
+    # collect dmesg for the stage
+    dmesg -c > "$dir/dmesg"
 }
 
 # colorful OK/FAIL formatting
