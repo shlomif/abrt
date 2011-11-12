@@ -18,7 +18,7 @@ for test_dir in $testlist; do
 
     # save post crashes
     if [ -d /var/spool/abrt ]; then
-        n_post=$( find /var/spool/abrt/* -type d | wc -l )
+        n_post=$( find /var/spool/abrt/ -type d | wc -l )
         if [ $n_post -gt 0 ]; then
             mkdir "$outdir/post_crashes"
             for dir in $( find /var/spool/abrt/* -type d ); do
