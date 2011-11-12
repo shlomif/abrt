@@ -9,8 +9,8 @@ export TEST_LIST='aux/test_order'
 export PRE_SCRIPT='aux/pre.sh'
 export TEST_SCRIPT='aux/run_in_order.sh'
 export RUNNER_SCRIPT='aux/runner.sh'
-export FORMAT_SCRIPT='aux/mailx_format.sh'
-export REPORT_SCRIPT='aux/mailx_report.sh'
+export FORMAT_SCRIPT='aux/no_format.sh'
+export REPORT_SCRIPT='aux/no_report.sh'
 export POST_SCRIPT='aux/post.sh'
 
 # - run script config -
