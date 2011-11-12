@@ -45,6 +45,9 @@ for test_dir in $testlist; do
 
     sed -n "${start},${end}p;${end}q" '/var/log/messages' > "$outdir/messages"
 
+    # collect dmesg
+    dmesg -c > "$outdir/dmesg"
+
     # append protocol to results
     echo '' >> $OUTPUT_ROOT/results
     cat "$outdir/protocol.log" >> $OUTPUT_ROOT/results
