@@ -1,11 +1,13 @@
-echo "Mailx disabled"
-exit 0
-
 date="$(date +%F)"
 
-tar czf $OUTPUT_ROOT.tar.gz $OUTPUT_ROOT
+if [ -x /bin/systemctl ]; then
+    /bin/systemctl start sendmail.service
+else
+    /usr/sbin/service sendmail start
+fi
+
 echo -n "Sending report to <$MAILTO>: "
-if cat $OUTPUT_ROOT/abrt-test-output.summary | mail -v -s "[$date] [$RESULT] ABRT testsuite report" -r $MAILFROM -a $OUTPUT_ROOT.tar.gz $MAILTO; then
+if cat $OUTPUT_ROOT/mail.summary | mail -v -s "[$date] [$RESULT] ABRT testsuite report" -r $MAILFROM -a $OUTPUT_ROOT.tar.gz $MAILTO; then
     echo "OK"
 else
     echo "FAILED"
