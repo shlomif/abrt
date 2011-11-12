@@ -17,12 +17,14 @@ for test_dir in $testlist; do
     syslog "End: $short_testname"
 
     # save post crashes
-    n_post=$( find /var/spool/abrt/* -type d | wc -l )
-    if [ $n_post -gt 0 ]; then
-        mkdir "$outdir/post_crashes"
-        for dir in $( find /var/spool/abrt/* -type d ); do
-            mv "$dir" "$outdir/post_crashes/"
-        done
+    if [ -d /var/spool/abrt ]; then
+        n_post=$( find /var/spool/abrt/* -type d | wc -l )
+        if [ $n_post -gt 0 ]; then
+            mkdir "$outdir/post_crashes"
+            for dir in $( find /var/spool/abrt/* -type d ); do
+                mv "$dir" "$outdir/post_crashes/"
+            done
+        fi
     fi
 
     # extract test protocol
