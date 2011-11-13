@@ -13,7 +13,7 @@ else
 fi
 
 echo -n "Sending report to <$MAILTO>: "
-if cat $OUTPUT_ROOT/mail.summary | mail -v -s "[$date] [$result] ABRT testsuite report" -r $MAILFROM -a $OUTPUT_ROOT.tar.gz $MAILTO; then
+if cat $OUTPUT_ROOT/mail.summary | mail -v -s "[$date] [$result] ABRT testsuite report" -r $MAILFROM -a /tmp/report.tar.gz $MAILTO; then
     echo "OK"
 else
     echo "FAILED"

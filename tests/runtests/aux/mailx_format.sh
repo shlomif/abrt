@@ -15,7 +15,8 @@ if grep -q 'FAIL' 'results'; then
 else
     echo 'All tests passed' >> 'mail.summary'
 fi
-tar czvf $OUTPUT_ROOT.tar.gz $OUTPUT_ROOT
-
 popd
 
+pushd ($ dirname $OUTPUT_ROOT)
+tar czvf /tmp/report.tar.gz $( basename $OUTPUT_ROOT )
+popd
