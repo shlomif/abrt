@@ -26,6 +26,9 @@ export DELAY=30
 export MAILTO='rmarko@redhat.com'
 export MAILFROM='abrt-testsuite-bot@redhat.com'
 
+# - scp script config -
+export SCPTO='exampleuser@example.org:/var/abrt/results/'
+
 # - post script config -
 # shutdown machine after testing
 export SHUTDOWN=0
