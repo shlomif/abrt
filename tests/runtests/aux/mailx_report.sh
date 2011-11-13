@@ -6,7 +6,7 @@ else
     /usr/sbin/service sendmail start
 fi
 
-if grep -q 'FAIL' 'results'; then
+if grep -q 'FAIL' "$OUTPUT_ROOT/results"; then
     result='FAIL'
 else
     result='PASS'
