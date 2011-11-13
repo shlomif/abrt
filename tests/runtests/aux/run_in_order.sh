@@ -21,7 +21,7 @@ for test_dir in $testlist; do
         n_post=$( find /var/spool/abrt/ -type d | wc -l )
         if [ $n_post -gt 0 ]; then
             mkdir "$outdir/post_crashes"
-            for dir in $( find /var/spool/abrt/* -type d ); do
+            for dir in $( find /var/spool/abrt/ -type d ); do
                 mv "$dir" "$outdir/post_crashes/"
             done
         fi
