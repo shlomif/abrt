@@ -6,8 +6,14 @@ else
     /usr/sbin/service sendmail start
 fi
 
+if grep -q 'FAIL' 'results'; then
+    result='FAIL'
+else
+    result='PASS'
+fi
+
 echo -n "Sending report to <$MAILTO>: "
-if cat $OUTPUT_ROOT/mail.summary | mail -v -s "[$date] [$RESULT] ABRT testsuite report" -r $MAILFROM -a $OUTPUT_ROOT.tar.gz $MAILTO; then
+if cat $OUTPUT_ROOT/mail.summary | mail -v -s "[$date] [$result] ABRT testsuite report" -r $MAILFROM -a $OUTPUT_ROOT.tar.gz $MAILTO; then
     echo "OK"
 else
     echo "FAILED"
