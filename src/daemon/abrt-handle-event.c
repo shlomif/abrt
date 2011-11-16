@@ -22,6 +22,7 @@
 
 static char *uid = NULL;
 static char *uuid = NULL;
+static struct btp_thread *canbt = NULL;
 static char *crash_dump_dup_name = NULL;
 
 /* There may be more than one way to check whether the new dump dir is a
@@ -58,13 +59,23 @@ struct dup_checker
 
 static int dup_uuid_init(const struct dump_dir *dd)
 {
+    char *analyzer;
+    int ccpp_analyzer;
+
     if (uuid)
         return 0; /* we already checked it, don't do it again */
+
+    analyzer = dd_load_text_ext(dd, FILENAME_ANALYZER,
+                            DD_FAIL_QUIETLY_ENOENT + DD_LOAD_TEXT_RETURN_NULL_ON_FAILURE
+    );
+    ccpp_analyzer = analyzer && strcmp(analyzer, "CCpp") == 0;
+    free(analyzer);
+    if (ccpp_analyzer)
+        return 0; /* don't do uuid-based check on ccpp crashes */
 
     uuid = dd_load_text_ext(dd, FILENAME_UUID,
                             DD_FAIL_QUIETLY_ENOENT + DD_LOAD_TEXT_RETURN_NULL_ON_FAILURE
     );
-
     if (!uuid)
         return 0; /* we don't have UUID (yet), maybe next time */
 
@@ -80,13 +91,58 @@ static int dup_uuid_compare(const struct dump_dir *dd)
     different = strcmp(uuid, dd_uuid);
     free(dd_uuid);
 
+    if (!different)
+        log("Duplicate: UUID");
+
     return !different;
+}
+
+static int dup_canbt_init(const struct dump_dir *dd)
+{
+    char *canbt_text;
+
+    if (canbt)
+        return 0; /* already checked */
+
+    canbt_text = dd_load_text_ext(dd, FILENAME_CANONICAL_BACKTRACE,
+                            DD_FAIL_QUIETLY_ENOENT | DD_LOAD_TEXT_RETURN_NULL_ON_FAILURE
+    );
+
+    if (!canbt_text)
+        return 0; /* no backtrace */
+
+    canbt = load_canonical_backtrace(canbt_text);
+    free(canbt_text);
+
+    if (!canbt)
+        return 0; /* error ? */
+
+    return 1;
+}
+
+static int dup_canbt_compare(const struct dump_dir *dd)
+{
+    int isdup = 0;
+    char *dd_canbt = dd_load_text_ext(dd, FILENAME_CANONICAL_BACKTRACE,
+            DD_FAIL_QUIETLY_ENOENT | DD_LOAD_TEXT_RETURN_NULL_ON_FAILURE);
+
+    if (!dd_canbt)
+        return 0;
+
+    isdup = canonical_backtrace_is_duplicate(canbt, dd_canbt);
+    free(dd_canbt);
+
+    if (isdup)
+        log("Duplicate: canonical backtrace");
+
+    return isdup;
 }
 
 /* All checkers must be present in this array. */
 struct dup_checker checkers[] =
 {
     {.init = dup_uuid_init, .compare = dup_uuid_compare},
+    {.init = dup_canbt_init, .compare = dup_canbt_compare},
     {.init = NULL, .compare = NULL}
 };
 
@@ -240,16 +296,6 @@ int main(int argc, char **argv)
             /* No. Was there error on one of processing steps in run_event? */
             if (r != 0)
                 return r; /* yes */
-
-            /* Was uuid created after all? (In this case, is_crash_a_dup()
-             * should have fetched it and created uuid)
-             */
-            if (!uuid)
-            {
-                /* no */
-                printf("Dump directory '%s' has no UUID element\n", dump_dir_name);
-                return 1;
-            }
         }
         else
         {
