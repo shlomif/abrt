@@ -24,66 +24,151 @@ static char *uid = NULL;
 static char *uuid = NULL;
 static char *crash_dump_dup_name = NULL;
 
-static int is_crash_a_dup(const char *dump_dir_name, void *param)
+/* There may be more than one way to check whether the new dump dir is a
+ * duplicate of another. Furthermore we may or may not run a particular test
+ * depending on what files are available in newly created dump dir (files are
+ * added as various post-create events are run).
+ *
+ * This is an attempt to abstract such checks into two functions. See the
+ * functions dup_uuid_init and dup_uuid_compare for concrete example.
+ */
+struct dup_checker
+{
+    /* This function is called every time a post-create event finishes. It may
+     * e.g. check whether the files needed are available (or whether this check
+     * has already run and therefore does not need to do so again).
+     * The argument passed is the dump directory of the newly created crash.
+     * If it returns nonzero, it means the initialization was successful and we
+     * should perform this check when iterating through other dump directories.
+     * If it is zero, this check will be skipped.
+     */
+    int (*init)(const struct dump_dir*);
+
+    /* If the initialization returned nonzero, this function will be called for
+     * all other dump directories against which we perform a duplicate check.
+     * The argument will be the dump_dir struct of the current directory
+     * against which we are checking.
+     * If it returns nonzero, it means that our new dumpdir and the dumpdir
+     * associated with the arguments are duplicate.
+     * Return value of zero either means that the function can't decide if it
+     * is a duplicate or it decided it isn't a duplicate.
+     */
+    int (*compare)(const struct dump_dir*);
+};
+
+static int dup_uuid_init(const struct dump_dir *dd)
 {
     if (uuid)
         return 0; /* we already checked it, don't do it again */
 
-    struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ 0);
-    if (!dd)
-        return 0; /* wtf? (error, but will be handled elsewhere later) */
     uuid = dd_load_text_ext(dd, FILENAME_UUID,
                             DD_FAIL_QUIETLY_ENOENT + DD_LOAD_TEXT_RETURN_NULL_ON_FAILURE
     );
-    dd_close(dd);
+
     if (!uuid)
-        return 0; /* no uuid (yet), "run_event, please continue iterating" */
+        return 0; /* we don't have UUID (yet), maybe next time */
 
-    /* Scan crash dumps looking for a dup */
-//TODO: explain why this is safe wrt concurrent runs
-    DIR *dir = opendir(g_settings_dump_location);
-    if (dir != NULL)
+    return 1;
+}
+
+static int dup_uuid_compare(const struct dump_dir *dd)
+{
+    char *dd_uuid;
+    int different;
+
+    dd_uuid = dd_load_text_ext(dd, FILENAME_UUID, DD_FAIL_QUIETLY_ENOENT);
+    different = strcmp(uuid, dd_uuid);
+    free(dd_uuid);
+
+    return !different;
+}
+
+/* All checkers must be present in this array. */
+struct dup_checker checkers[] =
+{
+    {.init = dup_uuid_init, .compare = dup_uuid_compare},
+    {.init = NULL, .compare = NULL}
+};
+
+static int is_crash_a_dup(const char *dump_dir_name, void *param)
+{
+    int retval = 0; /* defaults to no dup found, "run_event, please continue iterating" */
+
+    struct dump_dir *dd = dd_opendir(dump_dir_name, DD_OPEN_READONLY);
+    if (!dd)
+        return 0; /* wtf? (error, but will be handled elsewhere later) */
+
+    /* initialize list of checkers that will be used */
+    struct dup_checker *checker;
+    GList *active_checkers = NULL;
+    for (checker = checkers; checker->init != NULL; checker++)
     {
-        struct dirent *dent;
-        while ((dent = readdir(dir)) != NULL)
+        if (checker->init(dd))
         {
-            if (dot_or_dotdot(dent->d_name))
-                continue; /* skip "." and ".." */
-            const char *ext = strrchr(dent->d_name, '.');
-            if (ext && strcmp(ext, ".new") == 0)
-                continue; /* skip anything named "<dirname>.new" */
-
-            int different;
-            char *dd_uid, *dd_uuid;
-            char *dump_dir_name2 = concat_path_file(g_settings_dump_location, dent->d_name);
-
-            if (strcmp(dump_dir_name, dump_dir_name2) == 0)
-                goto next; /* we are never a dup of ourself */
-
-            dd = dd_opendir(dump_dir_name2, /*flags:*/ DD_FAIL_QUIETLY_ENOENT);
-            if (!dd)
-                goto next;
-            dd_uid = dd_load_text_ext(dd, FILENAME_UID, DD_FAIL_QUIETLY_ENOENT);
-            dd_uuid = dd_load_text_ext(dd, FILENAME_UUID, DD_FAIL_QUIETLY_ENOENT);
-            dd_close(dd);
-            different = strcmp(uid, dd_uid) || strcmp(uuid, dd_uuid);
-            free(dd_uid);
-            free(dd_uuid);
-            if (different)
-                goto next;
-
-            crash_dump_dup_name = dump_dir_name2;
-            /* "run_event, please stop iterating": */
-            return 1;
-
- next:
-            free(dump_dir_name2);
+            active_checkers = g_list_append(active_checkers, checker);
         }
-        closedir(dir);
     }
 
-    /* No dup found */
-    return 0; /* "run_event, please continue iterating" */
+    dd_close(dd);
+
+    if (active_checkers == NULL)
+        return 0; /* no checkers ready, skip checking altogether */
+
+    DIR *dir = opendir(g_settings_dump_location);
+    if (dir == NULL)
+        goto end;
+
+    /* Scan crash dumps looking for a dup */
+    //TODO: explain why this is safe wrt concurrent runs
+    struct dirent *dent;
+    while ((dent = readdir(dir)) != NULL)
+    {
+        if (dot_or_dotdot(dent->d_name))
+            continue; /* skip "." and ".." */
+        const char *ext = strrchr(dent->d_name, '.');
+        if (ext && strcmp(ext, ".new") == 0)
+            continue; /* skip anything named "<dirname>.new" */
+
+        char *dump_dir_name2 = concat_path_file(g_settings_dump_location, dent->d_name);
+
+        if (strcmp(dump_dir_name, dump_dir_name2) == 0)
+            goto next; /* we are never a dup of ourself */
+
+        dd = dd_opendir(dump_dir_name2, /*flags:*/ DD_FAIL_QUIETLY_ENOENT | DD_OPEN_READONLY);
+        if (!dd)
+            goto next;
+
+        /* crashes of different users are not considered duplicates */
+        char *dd_uid = dd_load_text_ext(dd, FILENAME_UID, DD_FAIL_QUIETLY_ENOENT);
+        if (strcmp(uid, dd_uid))
+        {
+            dd_close(dd);
+            goto next;
+        }
+
+        /* try each of the currently active checkers */
+        GList *li;
+        for (li = active_checkers; li != NULL; li = g_list_next(li))
+        {
+            checker = li->data;
+            if(checker->compare(dd))
+            {
+                dd_close(dd);
+                crash_dump_dup_name = dump_dir_name2;
+                retval = 1; /* "run_event, please stop iterating" */
+                goto end;
+            }
+        }
+        dd_close(dd);
+
+next:
+        free(dump_dir_name2);
+    }
+    closedir(dir);
+
+end:
+    g_list_free(active_checkers);
+    return retval;
 }
 
 static char *do_log(char *log_line, void *param)
