@@ -1,0 +1,70 @@
+reporter_run(ProblemData pd):
+    ReportEntryList pel = lr_easy_search($pd)
+
+    if $pel is empty
+        ReportEntry re = lr_easy_report($pd)
+        add $re to $pel
+
+    foreach ReportEntry p in $pel:
+        append "$p.reporter.name: URL=$p.url" to the problem data's reported_to
+
+    show_reports(pel)
+
+
+lr_easy_report(ProblemData pd):
+    Report r = lr_easy_build_report($pd)
+    ReportEntry re = lr_easy_report_create($r)
+    return $re
+
+
+lr_easy_build_report(ProblemData pd)
+    lr_review(pd)
+    return lr_convert(pd)
+
+
+uReport_search(ProblemData pd):
+    ureport = conver the problem data to ureport
+    response = send $ureport to the server
+
+    from all reported entries create new ReportEntries
+        ureport plugin must be aware of other plugins
+        reporter = libreport get reporte by name
+
+    ?? Solutions ??
+
+
+show_reports(ProblemEntryList pel)
+    some kind of list
+    user can select any problem entry
+    user can add comment or attach file
+
+
+Error reporting:
+    - take GLib approach - GError ?
+    - ReportError - NULL can be passed -> will cause exit( non zero )
+
+Progress reporting:
+    - logging from python
+
+Configuration:
+
+Questions:
+
+Reporting process:
+
+            title   description     product     version     comments    attachment  component    arch     duphash
+Bugzilla:     Y         Y              Y           Y           Y            Y           Y         Y          Y
+github  :     Y         Y              N           Y (ml)      Y            Y (pic)     N         N          N
+trac    :     Y         Y              N           Y           Y            N           Y         Y          N
+jira    :     Y         Y              N           N           Y            Y
+
+Why not problem data:
+  - users ususally knows the tracking system fields
+  - if they want to change something, they want to find the fields
+  - they can add some fields
+  - problem data are too generic and the meaning is unclear
+
+Attributes:
+  - uncommon data which can be used in various ways
+  - Bugzilla's private comment
+  - github's | trac's milestone
