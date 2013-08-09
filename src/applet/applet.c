@@ -598,6 +598,13 @@ static void die_if_dbus_error(bool error_flag, DBusError* err, const char* msg)
     error_msg_and_die("%s", msg);
 }
 
+static gboolean check_new_dist_at_quit(gpointer unused_data)
+{
+    VERB3 log("Going to sync new dir file at application exit");
+    list_free_with_free(new_dir_exists());
+    return FALSE; /* FALSE means that gtk_main() can return */
+}
+
 int main(int argc, char** argv)
 {
     /* I18n */
@@ -735,6 +742,9 @@ int main(int argc, char** argv)
         new_dirs = g_list_next(new_dirs);
     }
     list_free_with_free(new_dirs);
+
+    /* Deprecated function in Gtk3 */
+    gtk_quit_add(/*main_level*/0, check_new_dist_at_quit, /*data*/NULL);
 
     /* Enter main loop */
     gtk_main();
