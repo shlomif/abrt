@@ -74,6 +74,7 @@ Requires: dbus-1-glib
 %endif
 
 %if %{with systemd}
+BuildRequires: systemd-devel
 Requires: %{systemd_units}
 %endif
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -425,6 +426,8 @@ exit 0
 
 %post
 # $1 == 1 if install; 2 if upgrade
+%systemd_post abrtd.socket
+%systemd_post abrt-dump-location.path
 %systemd_post abrtd.service
 
 %post addon-ccpp
@@ -450,6 +453,8 @@ chown -R abrt:abrt %{_localstatedir}/cache/abrt-di
 %systemd_post abrt-upload-watch.service
 
 %preun
+%systemd_preun abrtd.socket
+%systemd_preun abrt-dump-location.path
 %systemd_preun abrtd.service
 
 %preun addon-ccpp
@@ -471,6 +476,8 @@ chown -R abrt:abrt %{_localstatedir}/cache/abrt-di
 %systemd_preun abrt-upload-watch.service
 
 %postun
+%systemd_postun_with_restart abrtd.socket
+%systemd_postun_with_restart abrt-dump-location.path
 %systemd_postun_with_restart abrtd.service
 
 %postun addon-ccpp
@@ -536,6 +543,8 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %defattr(-,root,root,-)
 %doc README COPYING
 %if %{with systemd}
+%{_unitdir}/abrtd.socket
+%{_unitdir}/abrt-dump-location.path
 %{_unitdir}/abrtd.service
 %{_tmpfilesdir}/abrt.conf
 %else
