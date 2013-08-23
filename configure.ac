@@ -109,11 +109,21 @@ PKG_CHECK_MODULES([GIO], [gio-2.0])
 PKG_CHECK_MODULES([SATYR], [satyr])
 
 PKG_PROG_PKG_CONFIG
+
+AH_TEMPLATE([HAVE_SYSTEMD],
+        [Define to 1 if you want to build abrt with systemd support.])
+
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
         [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
 AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
+
 AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir"])
+[if test -n "$with_systemdsystemunitdir"]
+[then]
+    PKG_CHECK_MODULES([LIBSYSTEMD_DEAMON], [libsystemd-daemon])
+    AC_DEFINE([HAVE_SYSTEMD], [1])
+[fi]
 
 AC_ARG_WITH([dbusinterfacedir],
         AS_HELP_STRING([--with-dbusinterfacedir=DIR], [Directory for dbus interface files]),

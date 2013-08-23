@@ -1,7 +1,7 @@
 [Unit]
 Description=Collect UEFI-saved oopses for ABRT
-After=abrtd.service
-Requisite=abrtd.service
+After=abrtd.socket
+Requisite=abrtd.socket
 ConditionDirectoryNotEmpty=/sys/fs/pstore
 
 [Service]

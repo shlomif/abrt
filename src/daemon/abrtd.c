@@ -16,16 +16,21 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+#include "libabrt.h"
+
 #if HAVE_LOCALE_H
 # include <locale.h>
 #endif
+
+#if HAVE_SYSTEMD
+# include <systemd/sd-daemon.h>
+#endif
+
 #include <sys/un.h>
 #include <syslog.h>
 
 #include "abrt_glib.h"
 #include "abrt-inotify.h"
-#include "libabrt.h"
-
 
 /* I want to use -Werror, but gcc-4.4 throws a curveball:
  * "warning: ignoring return value of 'ftruncate', declared with attribute warn_unused_result"
@@ -287,20 +292,31 @@ static void run_main_loop(GMainLoop* loop)
  */
 static void dumpsocket_init(void)
 {
-    unlink(SOCKET_FILE); /* not caring about the result */
+    int socketfd;
+#if HAVE_SYSTEMD
+    const int n = sd_listen_fds(0);
+    if (n > 1)
+        error_msg_and_die(_("Too many file descriptors received"));
+    else if (n == 1)
+        socketfd = SD_LISTEN_FDS_START + 0;
+    else
+#endif
+    {
+        unlink(SOCKET_FILE); /* not caring about the result */
 
-    int socketfd = xsocket(AF_UNIX, SOCK_STREAM, 0);
-    close_on_exec_on(socketfd);
+        socketfd = xsocket(AF_UNIX, SOCK_STREAM, 0);
+        close_on_exec_on(socketfd);
 
-    struct sockaddr_un local;
-    memset(&local, 0, sizeof(local));
-    local.sun_family = AF_UNIX;
-    strcpy(local.sun_path, SOCKET_FILE);
-    xbind(socketfd, (struct sockaddr*)&local, sizeof(local));
-    xlisten(socketfd, MAX_CLIENT_COUNT);
+        struct sockaddr_un local;
+        memset(&local, 0, sizeof(local));
+        local.sun_family = AF_UNIX;
+        strcpy(local.sun_path, SOCKET_FILE);
+        xbind(socketfd, (struct sockaddr*)&local, sizeof(local));
+        xlisten(socketfd, MAX_CLIENT_COUNT);
 
-    if (chmod(SOCKET_FILE, SOCKET_PERMISSION) != 0)
-        perror_msg_and_die("chmod '%s'", SOCKET_FILE);
+        if (chmod(SOCKET_FILE, SOCKET_PERMISSION) != 0)
+            perror_msg_and_die("chmod '%s'", SOCKET_FILE);
+    }
 
     channel_socket = abrt_gio_channel_unix_new(socketfd);
 

@@ -1,0 +1,9 @@
+[Unit]
+Description=ABRT Dump Location Watch
+After=systemd-tmpfiles-setup.service abrtd.socket
+Before=paths.target
+
+[Path]
+Unit=abrtd.service
+PathChanged=/var/tmp/abrt
+MakeDirectory=yes

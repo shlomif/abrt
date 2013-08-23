@@ -7,6 +7,3 @@ After=syslog.target livesys.service
 
 [Service]
 ExecStart=/usr/sbin/abrtd -d -s
-
-[Install]
-WantedBy=multi-user.target

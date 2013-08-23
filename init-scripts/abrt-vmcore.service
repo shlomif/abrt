@@ -1,7 +1,7 @@
 [Unit]
 Description=Harvest vmcores for ABRT
-After=abrtd.service
-Requisite=abrtd.service
+After=abrtd.socket
+Requisite=abrtd.socket
 ConditionDirectoryNotEmpty=/var/crash
 
 [Service]

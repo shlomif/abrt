@@ -1,7 +1,7 @@
 [Unit]
 Description=Install ABRT coredump hook
-After=abrtd.service
-Requisite=abrtd.service
+After=abrtd.socket
+Requisite=abrtd.socket
 
 [Service]
 Type=oneshot

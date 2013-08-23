@@ -1,7 +1,7 @@
 [Unit]
 Description=ABRT Xorg log watcher
-After=abrtd.service
-Requisite=abrtd.service
+After=abrtd.socket
+Requisite=abrtd.socket
 ConditionPathExists=/var/log/Xorg.0.log
 
 [Service]

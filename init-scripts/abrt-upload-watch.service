@@ -1,7 +1,7 @@
 [Unit]
 Description=ABRT upload watcher
-After=abrtd.service
-Requisite=abrtd.service
+After=abrtd.socket
+Requisite=abrtd.socket
 
 [Service]
 ExecStart=/usr/sbin/abrt-upload-watch

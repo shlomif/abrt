@@ -29,11 +29,13 @@ abrtd_CPPFLAGS = \
     -DLIBEXEC_DIR=\"$(libexecdir)\" \
     $(GLIB_CFLAGS) \
     $(LIBREPORT_CFLAGS) \
+    $(LIBSYSTEMD_DEAMON_CFLAGS) \
     -D_GNU_SOURCE \
     -fPIE
 abrtd_LDADD = \
     ../lib/libabrt.la \
-    $(LIBREPORT_LIBS)
+    $(LIBREPORT_LIBS) \
+    $(LIBSYSTEMD_DEAMON_LIBS)
 abrtd_LDFLAGS = \
     -Wl,-z,relro -Wl,-z,now \
     -pie

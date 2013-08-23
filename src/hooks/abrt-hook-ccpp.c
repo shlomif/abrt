@@ -606,6 +606,7 @@ int main(int argc, char** argv)
         default: goto create_user_core; // not a signal we care about
     }
 
+#if !HAVE_SYSTEMD
     if (!daemon_is_ok())
     {
         /* not an error, exit with exit code 0 */
@@ -615,6 +616,7 @@ int main(int argc, char** argv)
         );
         goto create_user_core;
     }
+#endif
 
     if (g_settings_nMaxCrashReportsSize > 0)
     {
