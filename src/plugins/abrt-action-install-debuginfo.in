@@ -3,6 +3,8 @@
 # WARNING: python -u means unbuffered I/O without it the messages are
 # passed to the parent asynchronously which looks bad in clients.
 
+from __future__ import print_function
+
 PROGNAME = "abrt-action-install-debuginfo"
 
 import sys
@@ -47,7 +49,7 @@ def sigterm_handler(signum, frame):
 
 def sigint_handler(signum, frame):
     clean_up()
-    print "\n", _("Exiting on user command")
+    print("\n", _("Exiting on user command"))
     sys.stdout.flush()
     # ??! without "sys.", I am getting segv!
     sys.exit(RETURN_OK)
@@ -78,7 +80,7 @@ if __name__ == "__main__":
             verbose = int(ABRT_VERBOSE)
         except:
             pass
-
+    set_verbosity(2)
     PROGNAME = os.path.basename(sys.argv[0])
     # ____________________________________________________________________________________ 7
     # ______01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -104,13 +106,13 @@ if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(sys.argv[1:], "vyhe",
                 ["help", "ids=", "cache=", "size_mb=", "tmpdir=", "keeprpms", "exact="])
-    except getopt.GetoptError, err:
-        print str(err) # prints something like "option -a not recognized"
+    except getopt.GetoptError as err:
+        print(str(err)) # prints something like "option -a not recognized"
         exit(RETURN_FAILURE)
 
     for opt, arg in opts:
         if opt in ("-h", "--help"):
-            print help_text
+            print(help_text)
             exit(0)
         elif opt == "-v":
             verbose += 1
@@ -150,8 +152,9 @@ if __name__ == "__main__":
 
                 cachedirs =  stripped[len("DebuginfoLocation"):].strip(" =\n").split(":")
             fp.close()
-        except IOError as (errno, strerror):
-            print "I/O error({0}): {1}".format(errno, strerror)
+        except IOError as err:
+            errno, strerror = err.args
+            print("I/O error(%s): %s" % (errno, strerror))
 
         if not cachedirs:
             cachedirs = ["/var/cache/abrt-di"]
@@ -167,8 +170,8 @@ if __name__ == "__main__":
         if fbuild_ids != "-":
             try:
                 fin = open(fbuild_ids, "r")
-            except IOError, ex:
-                error_msg_and_die(_("Can't open {0}: {1}").format(fbuild_ids, ex))
+            except IOError as ex:
+                error_msg_and_die(_("Can't open %s: %s") % (fbuild_ids, ex))
         for line in fin.readlines():
             b_ids.append(line.strip('\n'))
 
@@ -195,7 +198,7 @@ if __name__ == "__main__":
                 error_msg_and_die("Can't execute '%s'", "abrt-action-trim-files");
             if pid > 0:
                 os.waitpid(pid, 0);
-        except Exception, e:
+        except Exception as e:
             error_msg("Can't execute abrt-action-trim-files: %s", e);
 
         missing = filter_installed_debuginfos(b_ids, cachedirs)
@@ -203,21 +206,23 @@ if __name__ == "__main__":
     result = RETURN_OK
     if missing:
         log2("%s", missing)
-        print _("Coredump references {0} debuginfo files, {1} of them are not installed").format(len(b_ids), len(missing))
+        print(_("Coredump references %s debuginfo files, %s of them are "
+                    "not installed") % (len(b_ids), len(missing))
+             )
 
         # TODO: should we pass keep_rpms=keeprpms to DebugInfoDownload here??
         downloader = DebugInfoDownload(cache=cachedirs[0], tmp=tmpdir,
                                        noninteractive=noninteractive)
         try:
             result = downloader.download(missing, download_exact_files=exact_fls)
-        except Exception, ex:
+        except Exception as ex:
             error_msg_and_die("Can't download debuginfos: %s", ex)
 
         missing = filter_installed_debuginfos(b_ids, cachedirs)
         for bid in missing:
-            print _("Missing debuginfo file: {0}").format(bid)
+            print(_("Missing debuginfo file: %s") % bid)
 
     if not missing:
-        print _("All debuginfo files are available")
+        print(_("All debuginfo files are available"))
 
     exit(result)
