@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     if (g != getgid())
         IGNORE_RESULT(setregid(g, g));
     uid_t u = geteuid();
-    if (1)
+    if (u != getuid())
     {
         IGNORE_RESULT(setreuid(u, u));
         /* We are suid'ed! */
