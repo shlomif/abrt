@@ -30,12 +30,14 @@
 %define nss_devel mozilla-nss-devel
 %define systemd_units systemd
 %define shadow_utils pwdutils
+%define pygobject2 python-gobject2
 %else
 %define dbus_devel dbus-devel
 %define libjson_devel json-c-devel
 %define nss_devel nss-devel
 %define systemd_units systemd-units
 %define shadow_utils shadow-utils
+%define pygobject2 pygobject2
 %endif
 
 %define libreport_ver 2.1.6
@@ -343,7 +345,7 @@ uses PolicyKit to authorize to access the problem data.
 Summary: ABRT Python API
 Group: System Environment/Libraries
 Requires: %{name} = %{version}-%{release}
-Requires: pygobject2
+Requires: %{pygobject2}
 BuildRequires: python-nose
 BuildRequires: python-sphinx
 
@@ -551,7 +553,11 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %doc README COPYING
 %if %{with systemd}
 %{_unitdir}/abrtd.service
+%if 0%{?_tmpfilesdir}
 %{_tmpfilesdir}/abrt.conf
+%else
+%{_exec_prefix}/lib/tmpfiles.d/abrt.conf
+%endif
 %else
 %{_initrddir}/abrtd
 %endif
