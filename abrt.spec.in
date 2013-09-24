@@ -112,6 +112,7 @@ Libraries for %{name}-gui.
 %package gui-devel
 Summary: Development libraries for %{name}-gui
 Group: Development/Libraries
+Requires: abrt-devel = %{version}-%{release}
 Requires: abrt-gui-libs = %{version}-%{release}
 
 %description gui-devel
@@ -601,6 +602,7 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %files devel
 %defattr(-,root,root,-)
 %doc apidoc/html/*
+%dir %{_includedir}/abrt
 %{_includedir}/abrt/abrt-dbus.h
 %{_includedir}/abrt/hooklib.h
 %{_includedir}/abrt/libabrt.h
@@ -625,8 +627,7 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 # all glade, gtkbuilder and py files for gui
 %{_datadir}/icons/hicolor/*/apps/*
 %{_datadir}/icons/hicolor/*/status/*
-%{_datadir}/%{name}/icons/hicolor/*/status/*
-%{_datadir}/%{name}/ui/*
+%{_datadir}/%{name}
 %{_bindir}/abrt-applet
 %{_bindir}/system-config-abrt
 #%%{_bindir}/test-report
