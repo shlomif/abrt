@@ -71,6 +71,7 @@ Requires: libreport >= %{libreport_ver}
 Requires: satyr >= 0.5
 # these only exist on suse
 %if 0%{?suse_version}
+BuildRequires: systemd
 BuildRequires: dbus-1-glib-devel
 Requires: dbus-1-glib
 %endif
@@ -432,71 +433,155 @@ exit 0
 
 %post
 # $1 == 1 if install; 2 if upgrade
+%if 0%{?suse_version}
+%service_add_pre abrtd.service
+%else
 %systemd_post abrtd.service
+%endif
 
 %post addon-ccpp
 # this is required for transition from 1.1.x to 2.x
 # because /cache/abrt-di/* was created under root with root:root
 # so 2.x fails when it tries to extract debuginfo there..
 chown -R abrt:abrt %{_localstatedir}/cache/abrt-di
+%if 0%{?suse_version}
+%service_add_pre abrt-ccpp.service
+%else
 %systemd_post abrt-ccpp.service
+%endif
 
 %post addon-kerneloops
+%if 0%{?suse_version}
+%service_add_pre abrt-oops.service
+%else
 %systemd_post abrt-oops.service
+%endif
 
 %post addon-xorg
+%if 0%{?suse_version}
+%service_add_pre abrt-xorg.service
+%else
 %systemd_post abrt-xorg.service
+%endif
 
 %post addon-vmcore
+%if 0%{?suse_version}
+%service_add_pre abrt-vmcore.service
+%else
 %systemd_post abrt-vmcore.service
+%endif
 
 %post addon-pstoreoops
+%if 0%{?suse_version}
+%service_add_pre abrt-pstoreoops.service
+%else
 %systemd_post abrt-pstoreoops.service
+%endif
 
 %post addon-upload-watch
+%if 0%{?suse_version}
+%service_add_pre abrt-upload-watch.service
+%else
 %systemd_post abrt-upload-watch.service
+%endif
 
 %preun
+%if 0%{?suse_version}
+%service_del_preun abrtd.service
+%else
 %systemd_preun abrtd.service
+%endif
 
 %preun addon-ccpp
+%if 0%{?suse_version}
+%service_del_preun abrt-ccpp.service
+%else
 %systemd_preun abrt-ccpp.service
+%endif
 
 %preun addon-kerneloops
+%if 0%{?suse_version}
+%service_del_preun abrt-oops.service
+%else
 %systemd_preun abrt-oops.service
+%endif
 
 %preun addon-xorg
+%if 0%{?suse_version}
+%service_del_preun abrt-xorg.service
+%else
 %systemd_preun abrt-xorg.service
+%endif
 
 %preun addon-vmcore
+%if 0%{?suse_version}
+%service_del_preun abrt-vmcore.service
+%else
 %systemd_preun abrt-vmcore.service
+%endif
 
 %preun addon-pstoreoops
+%if 0%{?suse_version}
+%service_del_preun abrt-pstoreoops.service
+%else
 %systemd_preun abrt-pstoreoops.service
+%endif
 
 %preun addon-upload-watch
+%if 0%{?suse_version}
+%service_del_preun abrt-upload-watch.service
+%else
 %systemd_preun abrt-upload-watch.service
+%endif
 
 %postun
+%if 0%{?suse_version}
+%service_del_postun abrtd.service
+%else
 %systemd_postun_with_restart abrtd.service
+%endif
 
 %postun addon-ccpp
+%if 0%{?suse_version}
+%service_del_postun abrt-ccpp.service
+%else
 %systemd_postun_with_restart abrt-ccpp.service
+%endif
 
 %postun addon-kerneloops
+%if 0%{?suse_version}
+%service_del_postun abrt-oops.service
+%else
 %systemd_postun_with_restart abrt-oops.service
+%endif
 
 %postun addon-xorg
+%if 0%{?suse_version}
+%service_del_postun abrt-xorg.service
+%else
 %systemd_postun_with_restart abrt-xorg.service
+%endif
 
 %postun addon-vmcore
+%if 0%{?suse_version}
+%service_del_postun abrt-vmcore.service
+%else
 %systemd_postun_with_restart abrt-vmcore.service
+%endif
 
 %postun addon-pstoreoops
+%if 0%{?suse_version}
+%service_del_postun abrt-pstoreoops.service
+%else
 %systemd_postun_with_restart abrt-pstoreoops.service
+%endif
 
 %postun addon-upload-watch
+%if 0%{?suse_version}
+%service_del_postun abrt-upload-watch.service
+%else
 %systemd_postun_with_restart abrt-upload-watch.service
+%endif
 
 %post gui
 # update icon cache
