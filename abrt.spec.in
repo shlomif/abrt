@@ -73,7 +73,6 @@ Requires: satyr >= 0.5
 %if 0%{?suse_version}
 BuildRequires: systemd
 BuildRequires: dbus-1-glib-devel
-Requires: dbus-1-glib
 %endif
 
 %if %{with systemd}
@@ -664,7 +663,7 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %dir %attr(0755, abrt, abrt) %{_localstatedir}/%{var_base_dir}/%{name}
 %dir %attr(0700, abrt, abrt) %{_localstatedir}/spool/%{name}-upload
 # abrtd runs as root
-%dir %attr(0755, root, root) %{_localstatedir}/run/%{name}
+%ghost %dir %attr(0755, root, root) %{_localstatedir}/run/%{name}
 %ghost %attr(0666, -, -) %{_localstatedir}/run/%{name}/abrt.socket
 %ghost %attr(0644, -, -) %{_localstatedir}/run/%{name}/abrtd.pid
 
@@ -686,7 +685,7 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 
 %files devel
 %defattr(-,root,root,-)
-%doc apidoc/html/*
+%doc apidoc/html/*.{html,png,css,js}
 %dir %{_includedir}/abrt
 %{_includedir}/abrt/abrt-dbus.h
 %{_includedir}/abrt/hooklib.h
@@ -783,6 +782,7 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 
 
 %files retrace-client
+%defattr(-,root,root,-)
 %{_bindir}/abrt-retrace-client
 %{_mandir}/man1/abrt-retrace-client.1.gz
 %config(noreplace) %{_sysconfdir}/libreport/events.d/ccpp_retrace_event.conf
@@ -884,12 +884,14 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %{_defaultdocdir}/%{name}-dbus-%{version}/html/*.css
 
 %files python
+%defattr(-,root,root,-)
 %{python_sitelib}/problem/
 %{_mandir}/man5/abrt-python.5.gz
 %dir %{_defaultdocdir}/%{name}-python-%{version}/
 %{_defaultdocdir}/%{name}-python-%{version}/examples/
 
 %files console-notification
+%defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/profile.d/abrt-console-notification.sh
 
 %changelog
