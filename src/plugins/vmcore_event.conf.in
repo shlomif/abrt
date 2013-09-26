@@ -21,7 +21,7 @@ EVENT=report_Bugzilla analyzer=vmcore
 
 # Send micro report
 EVENT=report_uReport analyzer=vmcore
-        /usr/libexec/abrt-action-ureport
+        @libexecdir@/abrt-action-ureport
 
 EVENT=report-gui analyzer=vmcore
     report-gtk -- "$DUMP_DIR"

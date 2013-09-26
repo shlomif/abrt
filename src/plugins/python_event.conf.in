@@ -17,7 +17,7 @@ EVENT=report_Bugzilla analyzer=Python component!=anaconda
 
 # Send micro report
 EVENT=report_uReport analyzer=Python
-        /usr/libexec/abrt-action-ureport
+        @libexecdir@/abrt-action-ureport
 
 # update ABRT database after successful report to bugzilla
 EVENT=post_report analyzer=Python

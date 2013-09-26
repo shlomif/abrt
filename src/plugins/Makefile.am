@@ -71,7 +71,6 @@ PYTHON_FILES = \
     abrt-action-install-debuginfo.in \
     abrt-action-list-dsos \
     abrt-action-analyze-core \
-    abrt-action-analyze-vulnerability \
     abrt-action-analyze-vmcore.in \
     abrt-action-perform-ccpp-analysis.in
 
@@ -91,7 +90,12 @@ EXTRA_DIST = \
     abrt-gdb-exploitable \
     https-utils.h \
     post_report.xml.in \
-    abrt-action-analyze-ccpp-local.in
+    abrt-action-analyze-ccpp-local.in \
+    abrt-action-analyze-vulnerability.in \
+    ccpp_event.conf.in \
+    koops_event.conf.in \
+    vmcore_event.conf.in \
+    python_event.conf.in
 
 confdir = $(CONF_DIR)
 dist_conf_DATA = \
@@ -307,4 +311,12 @@ abrt-action-perform-ccpp-analysis: abrt-action-perform-ccpp-analysis.in
 
 abrt-action-analyze-ccpp-local: abrt-action-analyze-ccpp-local.in
 	sed -e s,\@LIBEXEC_DIR\@,$(libexecdir),g \
+        $< >$@
+
+abrt-action-analyze-vulnerability: abrt-action-analyze-vulnerability.in
+	sed -e s,\@libexecdir\@,$(libexecdir),g \
+        $< >$@
+
+%.conf: %.conf.in Makefile
+	sed -e s,\@libexecdir\@,$(libexecdir),g \
         $< >$@
