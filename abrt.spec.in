@@ -314,7 +314,9 @@ Requires: abrt-retrace-client
 %if %{with bodhi}
 Requires: abrt-plugin-bodhi
 %endif
-%if 0%{!?suse_version:1}
+%if 0%{?suse_version}
+Requires: libreport-opensuse >= %{libreport_ver}
+%else
 Requires: libreport-plugin-bugzilla >= %{libreport_ver}
 %endif
 Requires: libreport-plugin-logger >= %{libreport_ver}
