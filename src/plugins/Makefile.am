@@ -319,4 +319,6 @@ abrt-action-analyze-vulnerability: abrt-action-analyze-vulnerability.in
 
 %.conf: %.conf.in Makefile
 	sed -e s,\@libexecdir\@,$(libexecdir),g \
+        -e s,\@WITH_BUGZILLA_OPTION\@,$(WITH_BUGZILLA_OPTION),g \
+        -e s,\@WITH_BODHI_OPTION\@,$(WITH_BODHI_OPTION),g \
         $< >$@

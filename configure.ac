@@ -208,6 +208,8 @@ AM_CONDITIONAL(BUILD_BODHI, true)
 PKG_CHECK_MODULES([LIBREPORT_WEB], [libreport-web])
 else
 AM_CONDITIONAL(BUILD_BODHI, false)
+AC_SUBST([WITH_BUGZILLA_OPTION], ['--without-bz'])
+AC_SUBST([WITH_BODHI_OPTION], ['--without-bodhi'])
 fi dnl end NO_BODHI
 
 # Initialize the test suite.

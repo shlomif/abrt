@@ -58,7 +58,7 @@ EVENT=collect_xsession_errors analyzer=CCpp dso_list~=.*/libX11.*
 # TODO: can we still specify additional directories to search for debuginfos,
 # or was this ability lost with move to python installer?
 EVENT=analyze_LocalGDB analyzer=CCpp
-        abrt-action-analyze-ccpp-local
+        abrt-action-analyze-ccpp-local @WITH_BUGZILLA_OPTION@ @WITH_BODHI_OPTION@
 
 
 # Bugzilla requires nonempty duphash
