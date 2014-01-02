@@ -139,6 +139,7 @@ EVENTS_DIR='${datadir}/libreport/events'
 EVENTS_CONF_DIR='${sysconfdir}/libreport/events.d'
 ENABLE_SOCKET_OR_DBUS='-DENABLE_DBUS=1'
 DEFAULT_DUMP_DIR_MODE=$($PKG_CONFIG --variable=dd_mode libreport)
+PROBLEMS_CONFIG_INTERFACES_DIR=${datadir}/problems/config/interfaces
 
 AC_ARG_WITH([defaultdumplocation],
             AS_HELP_STRING([--with-defaultdumplocation=DIR],
@@ -225,6 +226,7 @@ AC_SUBST(EVENTS_CONF_DIR)
 AC_SUBST(EVENTS_DIR)
 AC_SUBST(DEFAULT_DUMP_LOCATION)
 AC_SUBST(DEFAULT_DUMP_DIR_MODE)
+AC_SUBST(PROBLEMS_CONFIG_INTERFACES_DIR)
 
 AC_ARG_WITH(bodhi,
 AS_HELP_STRING([--with-bodhi],[use Bodhi plugin (default is YES)]),
