@@ -54,4 +54,10 @@ orgfreedesktopproblemsservicedir = ${datadir}/dbus-1/system-services
 dist_orgfreedesktopproblemsservice_DATA = org.freedesktop.problems.service \
     com.redhat.problems.configuration.service
 
+problemsconfigurationdir = $(PROBLEMS_CONFIG_INTERFACES_DIR)
+dist_problemsconfiguration_DATA = \
+    com.redhat.problems.configuration.xml \
+    com.redhat.problems.configuration.abrt.xml \
+    com.redhat.problems.configuration.ccpp.xml
+
 eventsconfdir = $(EVENTS_CONF_DIR)

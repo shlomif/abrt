@@ -139,7 +139,7 @@ EVENTS_DIR='${datadir}/libreport/events'
 EVENTS_CONF_DIR='${sysconfdir}/libreport/events.d'
 ENABLE_SOCKET_OR_DBUS='-DENABLE_DBUS=1'
 DEFAULT_DUMP_DIR_MODE=$($PKG_CONFIG --variable=dd_mode libreport)
-PROBLEMS_CONFIG_INTERFACES_DIR=${datadir}/problems/config/interfaces
+PROBLEMS_CONFIG_INTERFACES_DIR=${datadir}/${PACKAGE_NAME}/problems-configuration
 
 AC_ARG_WITH([defaultdumplocation],
             AS_HELP_STRING([--with-defaultdumplocation=DIR],
